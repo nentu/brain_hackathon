@@ -26,3 +26,4 @@ dev = [
 [project.scripts]
 
 download_data = "brain_hackathon.data.download:main"
+align_data = "brain_hackathon.data.align:main"
