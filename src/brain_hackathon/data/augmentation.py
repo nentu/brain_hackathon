@@ -4,12 +4,12 @@ import cv2
 train_aug = A.Compose(
     [
         # Геометрические
-        A.ShiftScaleRotate(
-            shift_limit=0.05,
-            scale_limit=0.1,
-            rotate_limit=15,
+        A.Affine(
+            translate_percent=(-0.05, 0.05),
+            scale=(0.9, 1.1),
+            rotate=(-15, 15),
             border_mode=cv2.BORDER_CONSTANT,
-            value=0,
+            fill=0,
             p=0.7,
         ),
         A.HorizontalFlip(p=0.5),
@@ -23,9 +23,7 @@ train_aug = A.Compose(
         A.GaussNoise(std_range=(0.001, 0.01), p=0.2),
         A.GaussianBlur(blur_limit=(3, 3), sigma_limit=(0.1, 0.3), p=0.1),
         # Артефакты МРТ — минимальные
-        A.KSpaceSpikeNoise(
-            spike_amplitude=(0.01, 0.05), spike_frequency=(0.01, 0.05), p=0.05
-        ),
+        A.RingingOvershoot(blur_limit=(7, 9), cutoff=(1.2, 1.4), p=0.05),
     ]
 )
 
