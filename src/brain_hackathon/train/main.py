@@ -14,9 +14,9 @@ from brain_hackathon.train.metrics import METRIC_NAMES, Metrics
 # Defaults from the hyperparameter search (best val_loss/F1):
 # adamw, lr=1e-3, weight_decay=0, no freezing (all layers trainable).
 BEST_OPTIMIZER = "adamw"
-BEST_LR = 1e-4
-BEST_WEIGHT_DECAY = 0.001
-BEST_FREEZE_FIRST_N = None
+BEST_LR = 1e-3
+BEST_WEIGHT_DECAY = 0
+BEST_FREEZE_FIRST_N = 2
 
 __all__ = [
     "METRIC_NAMES",
