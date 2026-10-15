@@ -84,6 +84,20 @@ class Logger:
             except Exception:
                 pass
 
+    def log_model_artifact(self, path, name=None, aliases=("best",)):
+        """Upload a checkpoint to W&B as a versioned model artifact."""
+        if self.run is None or not self.log_artifacts or not path:
+            return None
+        try:
+            artifact = self._wandb.Artifact(
+                name=name or f"model-{self.run.id}", type="model"
+            )
+            artifact.add_file(path)
+            self.run.log_artifact(artifact, aliases=list(aliases))
+            return artifact
+        except Exception:
+            return None
+
     def finish(self, results_path=None):
         if results_path is None:
             results_path = os.path.join(self.checkpoint_dir, "results.json")
@@ -103,6 +117,14 @@ class Logger:
                     results_path,
                     base_path=os.path.dirname(os.path.abspath(results_path)),
                 )
+                if self.log_artifacts:
+                    run_id = self.run.id
+                    self.log_model_artifact(
+                        self.best_path, name=f"model-{run_id}-best", aliases=("best",)
+                    )
+                    self.log_model_artifact(
+                        self.last_path, name=f"model-{run_id}-last", aliases=("last",)
+                    )
                 self.run.finish()
             except Exception:
                 pass

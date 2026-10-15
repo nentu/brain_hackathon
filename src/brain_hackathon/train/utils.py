@@ -204,6 +204,12 @@ def build_datasets(
     """
     dataset_kwargs.pop("augment", None)
     base = AlignedMRIClassificationDataset(root=root, split=splits, **dataset_kwargs)
+    if len(base.index) == 0:
+        raise ValueError(
+            f"no series found for root={root!r} and splits={tuple(splits)!r}. "
+            "Expected <root>/<split>/<class>/<series_id>_<MODALITY>.jpg; check the path "
+            "and that it contains the split folders (e.g. 'Train'/'Test')."
+        )
     labels = [base.class_to_idx[class_name] for _, class_name, _ in base.index]
 
     train_idx, val_idx, test_idx, removed = build_split_indices(
@@ -215,6 +221,11 @@ def build_datasets(
         dedup=dedup,
         max_shared_files=max_shared_files,
     )
+    if not train_idx or not val_idx:
+        raise ValueError(
+            f"empty split after dedup/stratify (train={len(train_idx)}, "
+            f"val={len(val_idx)}, test={len(test_idx)}); need more series per class."
+        )
     if verbose:
         print(
             f"dedup: {removed} duplicate series removed "

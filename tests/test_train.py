@@ -132,6 +132,46 @@ def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):
     assert os.environ["WANDB_API_KEY"] == "existing-key"
 
 
+def test_log_model_artifact_disabled(tmp_path):
+    logger = Logger(checkpoint_dir=str(tmp_path), enabled=False)
+    assert logger.log_model_artifact(str(tmp_path / "best.pt")) is None
+
+
+def test_log_model_artifact_uploads(tmp_path):
+    logger = Logger(checkpoint_dir=str(tmp_path), enabled=False)
+    checkpoint = tmp_path / "best.pt"
+    checkpoint.write_bytes(b"weights")
+
+    class FakeArtifact:
+        def __init__(self, name, type):
+            self.name = name
+            self.type = type
+            self.files = []
+
+        def add_file(self, path):
+            self.files.append(path)
+
+    class FakeRun:
+        id = "run-1"
+
+        def __init__(self):
+            self.logged = []
+
+        def log_artifact(self, artifact, aliases=None):
+            self.logged.append((artifact, aliases))
+
+    class FakeWandb:
+        Artifact = FakeArtifact
+
+    logger.run = FakeRun()
+    logger._wandb = FakeWandb
+
+    artifact = logger.log_model_artifact(str(checkpoint), aliases=("best",))
+    assert artifact is not None
+    assert artifact.files == [str(checkpoint)]
+    assert logger.run.logged[0][1] == ["best"]
+
+
 def test_logger_dumps_results(tmp_path):
     logger = Logger(checkpoint_dir=str(tmp_path / "ckpt"), enabled=False)
     logger.log_epoch(1, {"val/loss": 0.5}, step=1)
