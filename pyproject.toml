@@ -8,9 +8,14 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "albumentations>=2.0.8",
+    "huggingface-hub>=2.2.0",
     "matplotlib>=3.11.2",
     "opencv-python>=5.0.0.93",
     "plotly>=7.1.0",
+    "pytest>=9.1.1",
+    "torch>=2.14.1",
+    "torchvision>=0.29.1",
     "wget>=3.2",
 ]
 
@@ -21,8 +26,17 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "ipykernel>=7.4.0",
+    "wandb>=0.30.0",
 ]
 
 [project.scripts]
 
 download_data = "brain_hackathon.data.download:main"
+align_data = "brain_hackathon.data.align:main"
+preview_data = "brain_hackathon.data.preview:main"
+train_model = "brain_hackathon.train.main:main"
+search_hparams = "brain_hackathon.train.search:main"
+train = "brain_hackathon.train.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
