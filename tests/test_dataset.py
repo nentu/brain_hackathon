@@ -198,3 +198,30 @@ def test_class_filter(aligned_root):
     tensor, label = dataset[0]
     assert dataset.classes == ["meningioma"]
     assert label == 0
+
+
+def test_single_split_is_normalized_to_tuple(aligned_root):
+    dataset = AlignedMRIClassificationDataset(root=aligned_root, split="Train")
+    assert dataset.splits == ("Train",)
+
+
+def test_multiple_splits_combined(tmp_path):
+    root = tmp_path / "aligned"
+    write_series(root / "Train" / "glioma", "1", MODALITIES)
+    write_series(root / "Train" / "meningioma", "3", MODALITIES)
+    write_series(root / "Test" / "glioma", "2", MODALITIES)
+
+    dataset = AlignedMRIClassificationDataset(root=str(root), split=("Train", "Test"))
+
+    assert dataset.splits == ("Train", "Test")
+    assert dataset.classes == ["glioma", "meningioma"]
+    assert len(dataset) == 3
+    assert [(sid, cls) for sid, cls, _ in dataset.index] == [
+        ("1", "glioma"),
+        ("3", "meningioma"),
+        ("2", "glioma"),
+    ]
+
+    tensor, label = dataset[2]
+    assert tensor.shape == (len(MODALITIES), *SHAPE)
+    assert dataset.classes[label] == "glioma"

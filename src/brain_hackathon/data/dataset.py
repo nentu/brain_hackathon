@@ -10,51 +10,68 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
 DEFAULT_ROOT = os.path.join("data", "aligned")
 
 
-def discover_classes(root, split):
-    split_dir = os.path.join(root, split)
-    if not os.path.isdir(split_dir):
-        return []
-    return sorted(
-        name
-        for name in os.listdir(split_dir)
-        if os.path.isdir(os.path.join(split_dir, name))
-    )
+def as_splits(split):
+    """Normalize a split argument (one name or an iterable of names) to a tuple."""
+    if isinstance(split, str):
+        return (split,)
+    return tuple(split)
+
+
+def discover_classes(root, splits):
+    """Sorted union of class directories across one or more splits."""
+    classes = set()
+    for split in as_splits(splits):
+        split_dir = os.path.join(root, split)
+        if not os.path.isdir(split_dir):
+            continue
+        classes.update(
+            name
+            for name in os.listdir(split_dir)
+            if os.path.isdir(os.path.join(split_dir, name))
+        )
+    return sorted(classes)
 
 
 def _series_sort_key(series_id):
     return (0, int(series_id)) if series_id.isdigit() else (1, series_id)
 
 
-def build_series_index(root, split, classes=None):
-    """Index the aligned dataset.
+def build_series_index(root, splits, classes=None):
+    """Index the aligned dataset across one or more splits.
 
-    Returns ``(classes, index)`` where ``classes`` is the sorted class list and
-    ``index`` is a list of ``(series_id, class_name, {modality: path})``. Modalities
-    that are absent for a series are simply missing from the dict.
+    ``splits`` is a split name or an iterable of split names; entries from every split
+    are concatenated (split-major order). Returns ``(classes, index)`` where ``classes``
+    is the sorted class list and ``index`` is a list of
+    ``(series_id, class_name, {modality: path})``. Modalities that are absent for a
+    series are simply missing from the dict.
     """
+    splits = as_splits(splits)
     if classes is None:
-        classes = discover_classes(root, split)
+        classes = discover_classes(root, splits)
     classes = list(classes)
 
     index = []
-    for class_name in classes:
-        class_dir = os.path.join(root, split, class_name)
-        if not os.path.isdir(class_dir):
-            continue
-
-        series = {}
-        for fname in sorted(os.listdir(class_dir)):
-            stem, ext = os.path.splitext(fname)
-            if ext.lower() not in IMAGE_EXTENSIONS or "_" not in stem:
+    for split in splits:
+        for class_name in classes:
+            class_dir = os.path.join(root, split, class_name)
+            if not os.path.isdir(class_dir):
                 continue
-            series_id, modality = stem.rsplit("_", 1)
-            modality = modality.upper()
-            if modality not in MODALITIES:
-                continue
-            series.setdefault(series_id, {})[modality] = os.path.join(class_dir, fname)
 
-        for series_id in sorted(series, key=_series_sort_key):
-            index.append((series_id, class_name, series[series_id]))
+            series = {}
+            for fname in sorted(os.listdir(class_dir)):
+                stem, ext = os.path.splitext(fname)
+                if ext.lower() not in IMAGE_EXTENSIONS or "_" not in stem:
+                    continue
+                series_id, modality = stem.rsplit("_", 1)
+                modality = modality.upper()
+                if modality not in MODALITIES:
+                    continue
+                series.setdefault(series_id, {})[modality] = os.path.join(
+                    class_dir, fname
+                )
+
+            for series_id in sorted(series, key=_series_sort_key):
+                index.append((series_id, class_name, series[series_id]))
 
     return classes, index
 
@@ -100,6 +117,9 @@ class AlignedMRIDataset(Dataset):
 
     Layout: ``<root>/<split>/<class>/<series_id>_<MODALITY>.<ext>``.
 
+    ``split`` may be a single split name or an iterable of splits (e.g.
+    ``("Train", "Test")``); series from every split are combined.
+
     Every item is a float tensor of shape ``(len(MODALITIES), H, W)`` with channels
     ordered as ``MODALITIES`` (BR, DA, HF, RO, SP, VF). Modalities missing for a
     series are filled with ``fill_value``.
@@ -125,12 +145,13 @@ class AlignedMRIDataset(Dataset):
     ):
         self.root = root
         self.split = split
+        self.splits = as_splits(split)
         self.augment = augment
         self.normalization = normalization
         self.norm_stats = norm_stats
         self.fill_value = int(fill_value)
         self.transform = transform
-        self.classes, self.index = build_series_index(root, split, classes)
+        self.classes, self.index = build_series_index(root, self.splits, classes)
         self.class_to_idx = {name: i for i, name in enumerate(self.classes)}
 
     def __len__(self):
