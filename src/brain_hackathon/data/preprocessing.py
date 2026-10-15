@@ -110,8 +110,8 @@ def try_variant(kp_ref, des_ref, gray, flip_h, flip_v):
 def adapter_image_transforms(transform: dict):
     if transform["angle_deg"] < -2:
         transform["angle_deg"] = 180 + transform["angle_deg"]
-    transform["flip_horizontal"] = not transform["flip_horizontal"]
-    transform["flip_vertical"] = not transform["flip_vertical"]
+        transform["flip_horizontal"] = not transform["flip_horizontal"]
+        transform["flip_vertical"] = not transform["flip_vertical"]
     return transform
 
 
@@ -167,7 +167,7 @@ def process_images(img_list):
                 }
             )
 
-    # return [adapter_image_transforms(i) for i in results]
+    return [adapter_image_transforms(i) for i in results]
     return results
 
 
