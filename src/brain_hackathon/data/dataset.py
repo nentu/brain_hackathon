@@ -59,6 +59,42 @@ def build_series_index(root, split, classes=None):
     return classes, index
 
 
+def foreground_stats(image):
+    """Mean and std over non-black (non-zero) pixels of ``image``."""
+    values = np.asarray(image)[np.asarray(image) > 0].astype(np.float64)
+    if values.size == 0:
+        return 0.0, 0.0
+    return float(values.mean()), float(values.std())
+
+
+def three_sigma_normalize(image, mean, std):
+    """Map ``[mean - 3*std, mean + 3*std]`` to ``[0, 1]`` and clip."""
+    low = mean - 3.0 * std
+    span = 6.0 * std
+    image = np.asarray(image, dtype=np.float32)
+    if span <= 0.0:
+        return np.zeros_like(image)
+    return np.clip((image - low) / span, 0.0, 1.0)
+
+
+def compute_foreground_stats(images):
+    """Global foreground mean/std over an iterable of arrays (e.g. a whole split)."""
+    count = 0
+    total = 0.0
+    total_sq = 0.0
+    for image in images:
+        array = np.asarray(image)
+        values = array[array > 0].astype(np.float64)
+        count += values.size
+        total += values.sum()
+        total_sq += float((values * values).sum())
+    if count == 0:
+        return 0.0, 0.0
+    mean = total / count
+    variance = max(total_sq / count - mean * mean, 0.0)
+    return float(mean), float(variance**0.5)
+
+
 class AlignedMRIDataset(Dataset):
     """Multimodal MRI dataset over the aligned dataset layout.
 
@@ -67,6 +103,11 @@ class AlignedMRIDataset(Dataset):
     Every item is a float tensor of shape ``(len(MODALITIES), H, W)`` with channels
     ordered as ``MODALITIES`` (BR, DA, HF, RO, SP, VF). Modalities missing for a
     series are filled with ``fill_value``.
+
+    ``augment`` is an Albumentations ``Compose`` (see ``augmentation.py``). It is
+    applied to the stacked ``(H, W, 6)`` image so every geometric transform is shared
+    by all channels. Normalization (``"three_sigma"``) uses statistics over non-black
+    pixels only; pass ``norm_stats=(mean, std)`` for fixed (e.g. dataset-wide) stats.
     """
 
     channel_names = MODALITIES
@@ -76,14 +117,18 @@ class AlignedMRIDataset(Dataset):
         root=DEFAULT_ROOT,
         split="Train",
         classes=None,
-        normalize=True,
-        fill_value=0.0,
+        augment=None,
+        normalization="three_sigma",
+        norm_stats=None,
+        fill_value=0,
         transform=None,
     ):
         self.root = root
         self.split = split
-        self.normalize = normalize
-        self.fill_value = float(fill_value)
+        self.augment = augment
+        self.normalization = normalization
+        self.norm_stats = norm_stats
+        self.fill_value = int(fill_value)
         self.transform = transform
         self.classes, self.index = build_series_index(root, split, classes)
         self.class_to_idx = {name: i for i, name in enumerate(self.classes)}
@@ -94,7 +139,7 @@ class AlignedMRIDataset(Dataset):
     def series_ids(self):
         return [series_id for series_id, _, _ in self.index]
 
-    def _load_stack(self, modality_paths):
+    def _load_hwc(self, modality_paths):
         images = {}
         for modality in MODALITIES:
             path = modality_paths.get(modality)
@@ -109,18 +154,29 @@ class AlignedMRIDataset(Dataset):
         else:
             height = width = 0
 
-        scale = 1.0 / 255.0 if self.normalize else 1.0
         stack = np.full(
-            (len(MODALITIES), height, width), self.fill_value, dtype=np.float32
+            (height, width, len(MODALITIES)), self.fill_value, dtype=np.uint8
         )
         for i, modality in enumerate(MODALITIES):
             if modality in images:
-                stack[i] = images[modality].astype(np.float32) * scale
+                stack[:, :, i] = images[modality]
         return stack
 
     def load_series(self, index):
         _, _, modality_paths = self.index[index]
-        tensor = torch.from_numpy(self._load_stack(modality_paths))
+        stack = self._load_hwc(modality_paths)
+
+        if self.augment is not None:
+            stack = self.augment(image=stack)["image"]
+
+        array = np.asarray(stack, dtype=np.float32)
+        if self.normalization == "three_sigma":
+            mean, std = self.norm_stats if self.norm_stats else foreground_stats(array)
+            array = three_sigma_normalize(array, mean, std)
+        elif self.normalization not in (None, "none"):
+            raise ValueError(f"unknown normalization: {self.normalization!r}")
+
+        tensor = torch.from_numpy(np.ascontiguousarray(array.transpose(2, 0, 1)))
         if self.transform is not None:
             tensor = self.transform(tensor)
         return tensor
