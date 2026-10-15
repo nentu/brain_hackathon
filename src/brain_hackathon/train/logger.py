@@ -37,6 +37,7 @@ class Logger:
         self.last_path = None
         self.run = None
         self._wandb = None
+        self.config = dict(config) if config else {}
 
         self.enabled = enabled
         if self.enabled:
@@ -58,6 +59,16 @@ class Logger:
             except Exception as exc:  # pragma: no cover - depends on environment
                 print(f"W&B disabled: {exc}")
                 self.enabled = False
+
+    def log_config(self, data):
+        """Merge the training configuration into the run config."""
+        self.config.update(data)
+        if self.run is not None:
+            try:
+                self.run.config.update(data, allow_val_change=True)
+            except Exception:
+                pass
+        return self.config
 
     def log(self, data, step=None):
         if self.run is not None:

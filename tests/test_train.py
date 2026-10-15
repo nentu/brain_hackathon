@@ -132,6 +132,41 @@ def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):
     assert os.environ["WANDB_API_KEY"] == "existing-key"
 
 
+def test_log_config_stores_and_merges(tmp_path):
+    logger = Logger(checkpoint_dir=str(tmp_path), enabled=False, config={"a": 1})
+    logger.log_config({"b": 2})
+    assert logger.config == {"a": 1, "b": 2}
+
+
+def test_train_logs_config(aligned_root, tmp_path):
+    train_ds, val_ds, test_ds = build_datasets(
+        root=aligned_root, train_transform=None, eval_transform=None
+    )
+    model = TinyModel(len(train_ds.dataset.classes))
+    logger = Logger(checkpoint_dir=str(tmp_path / "ckpt"), enabled=False)
+
+    train(
+        model,
+        train_ds,
+        val_ds,
+        test_ds,
+        lr=1e-3,
+        batch_size=4,
+        epochs=1,
+        patience=10,
+        loss_period=1000,
+        logger=logger,
+        checkpoint_dir=str(tmp_path / "ckpt"),
+        device="cpu",
+    )
+
+    assert logger.config["lr"] == 1e-3
+    assert logger.config["optimizer"] == "adamw"
+    assert logger.config["batch_size"] == 4
+    assert logger.config["n_train"] == len(train_ds)
+    assert logger.config["n_params"] > 0
+
+
 def test_log_model_artifact_disabled(tmp_path):
     logger = Logger(checkpoint_dir=str(tmp_path), enabled=False)
     assert logger.log_model_artifact(str(tmp_path / "best.pt")) is None

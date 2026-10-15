@@ -172,6 +172,32 @@ def train(
         logger.checkpoint_dir = checkpoint_dir
     os.makedirs(checkpoint_dir, exist_ok=True)
 
+    if logger is not None:
+        logger.log_config(
+            {
+                "optimizer": optimizer
+                if isinstance(optimizer, str)
+                else type(opt).__name__,
+                "lr": lr,
+                "weight_decay": weight_decay,
+                "batch_size": batch_size,
+                "epochs": epochs,
+                "patience": patience,
+                "min_delta": min_delta,
+                "loss_period": loss_period,
+                "seed": seed,
+                "device": str(device),
+                "num_classes": num_classes,
+                "n_train": len(train_dataset),
+                "n_val": len(val_dataset),
+                "n_test": len(test_dataset) if test_dataset is not None else 0,
+                "n_params": sum(param.numel() for param in model.parameters()),
+                "n_trainable": sum(
+                    param.numel() for param in model.parameters() if param.requires_grad
+                ),
+            }
+        )
+
     early = EarlyStopping(patience=patience, min_delta=min_delta)
 
     global_step = 0
