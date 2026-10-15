@@ -1,5 +1,39 @@
 import albumentations as A
 import cv2
+import numpy as np
+
+
+class ChannelDropout(A.ImageOnlyTransform):
+    """Set whole channels to black to simulate missing modalities.
+
+    Each channel is dropped independently with probability ``drop_prob``. With
+    ``fill_value=0`` a dropped channel becomes black.
+    """
+
+    def __init__(self, drop_prob=0.3, fill_value=0, p=1.0):
+        super().__init__(p=p)
+        self.drop_prob = drop_prob
+        self.fill_value = fill_value
+
+    def get_params_dependent_on_data(self, params, data):
+        channels = data["image"].shape[2] if data["image"].ndim == 3 else 1
+        return {"drop_mask": np.random.random(channels) < self.drop_prob}
+
+    def apply(self, img, drop_mask=None, **params):
+        if drop_mask is None or not drop_mask.any():
+            return img
+        img = img.copy()
+        if img.ndim == 3:
+            for channel in range(img.shape[2]):
+                if drop_mask[channel]:
+                    img[:, :, channel] = self.fill_value
+        else:
+            img[:] = self.fill_value
+        return img
+
+    def get_transform_init_args_names(self):
+        return ("drop_prob", "fill_value")
+
 
 train_aug = A.Compose(
     [
@@ -24,6 +58,8 @@ train_aug = A.Compose(
         A.GaussianBlur(blur_limit=(3, 3), sigma_limit=(0.1, 0.3), p=0.1),
         # Артефакты МРТ — минимальные
         A.RingingOvershoot(blur_limit=(7, 9), cutoff=(1.2, 1.4), p=0.05),
+        # Пропущенные модальности
+        ChannelDropout(drop_prob=0.2, p=1.0),
     ]
 )
 
