@@ -51,7 +51,10 @@ def build_optimizer(model, optimizer, lr, weight_decay):
         cls = optimizer
     else:
         raise TypeError(f"unsupported optimizer: {optimizer!r}")
-    return cls(model.parameters(), lr=lr, weight_decay=weight_decay)
+    params = [param for param in model.parameters() if param.requires_grad]
+    if not params:
+        raise ValueError("no trainable parameters (all layers are frozen)")
+    return cls(params, lr=lr, weight_decay=weight_decay)
 
 
 def num_classes_of(dataset):
@@ -193,14 +196,20 @@ def train(
             count += images.size(0)
             metrics.update(logits, targets)
 
-            if test_loader is not None and loss_period and global_step % loss_period == 0:
+            if (
+                test_loader is not None
+                and loss_period
+                and global_step % loss_period == 0
+            ):
                 test_step_loss = evaluate_loss(model, test_loader, criterion, device)
                 step_test_losses.append((global_step, test_step_loss))
                 if logger is not None:
                     logger.log({"test/loss_step": test_step_loss}, step=global_step)
 
         train_loss = running / max(count, 1)
-        val_loss, val_metrics = evaluate(model, val_loader, criterion, device, num_classes)
+        val_loss, val_metrics = evaluate(
+            model, val_loader, criterion, device, num_classes
+        )
 
         record = {
             "global_step": global_step,
@@ -267,6 +276,19 @@ def parse_args(argv=None):
     parser.add_argument("--loss-period", type=int, default=50)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--checkpoint-dir", default="checkpoints")
+    parser.add_argument(
+        "--freeze-all",
+        action="store_true",
+        default=True,
+        help="freeze every layer except the first --first-n backbone layers and the head",
+    )
+    parser.add_argument(
+        "--first-n",
+        type=int,
+        default=2,
+        dest="first_n",
+        help="number of first backbone layers to keep trainable with --freeze-all",
+    )
     parser.add_argument("--wandb-project", default="brain-hackathon")
     parser.add_argument("--wandb-mode", default=None)
     parser.add_argument("--no-wandb", action="store_true")
@@ -280,7 +302,10 @@ def main(argv=None):
     args = parse_args(argv)
 
     train_ds, val_ds, test_ds = build_datasets(root=args.root)
-    model = RadImageNetResNet50(dim=len(train_ds.dataset.classes))
+    model = RadImageNetResNet50(
+        dim=len(train_ds.dataset.classes),
+        unfreeze_first_n=args.first_n if args.freeze_all else None,
+    )
     logger = Logger(
         project=args.wandb_project,
         mode=args.wandb_mode,

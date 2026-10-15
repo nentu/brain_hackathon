@@ -51,6 +51,43 @@ def test_first_conv_weights_duplicated(model):
     assert torch.equal(conv[:, 3:], pretrained)
 
 
+def _new_model(**kwargs):
+    try:
+        return RadImageNetResNet50(verbose=False, **kwargs)
+    except Exception as exc:  # network / weights unavailable
+        pytest.skip(f"RadImageNet weights unavailable: {exc}")
+
+
+def test_freeze_all_except_keeps_first_n_and_head():
+    model = _new_model()
+    model.freeze_all_except(2)
+
+    assert all(p.requires_grad for p in model.head.parameters())
+    assert all(p.requires_grad for p in model.backbone[0].parameters())
+    assert all(p.requires_grad for p in model.backbone[1].parameters())
+    assert not any(p.requires_grad for p in model.backbone[4].parameters())
+    assert not any(p.requires_grad for p in model.backbone[7].parameters())
+
+
+def test_freeze_all_except_zero_only_head():
+    model = _new_model()
+    model.freeze_all_except(0)
+    assert all(p.requires_grad for p in model.head.parameters())
+    assert not any(
+        p.requires_grad for name, p in model.named_parameters() if name.startswith("backbone.")
+    )
+
+
+def test_unfreeze_first_n_flag():
+    model = _new_model(unfreeze_first_n=3)
+    trainable = {name for name, p in model.named_parameters() if p.requires_grad}
+
+    assert any(name.startswith("head.") for name in trainable)
+    assert "backbone.0.weight" in trainable
+    assert "backbone.1.weight" in trainable
+    assert "backbone.4.0.conv1.weight" not in trainable
+
+
 def test_head_is_xavier_initialised(model):
     weight = model.head.weight.detach().cpu()
     bound = math.sqrt(6.0 / (weight.shape[0] + weight.shape[1]))
