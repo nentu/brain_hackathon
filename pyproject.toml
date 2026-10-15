@@ -36,6 +36,7 @@ align_data = "brain_hackathon.data.align:main"
 preview_data = "brain_hackathon.data.preview:main"
 train_model = "brain_hackathon.train.main:main"
 search_hparams = "brain_hackathon.train.search:main"
+report_hparams = "brain_hackathon.train.report:main"
 train = "brain_hackathon.train.main:main"
 
 [tool.pytest.ini_options]

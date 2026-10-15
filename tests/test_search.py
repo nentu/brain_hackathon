@@ -17,7 +17,7 @@ from brain_hackathon.train.utils import build_datasets
 
 def write_series(class_dir, series_id, shape=(8, 8)):
     os.makedirs(class_dir, exist_ok=True)
-    image = np.arange(np.prod(shape), dtype=np.uint8).reshape(shape)
+    image = np.full(shape, (int(series_id) % 250) + 1, dtype=np.uint8)
     for modality in MODALITIES:
         cv2.imwrite(os.path.join(class_dir, f"{series_id}_{modality}.jpg"), image)
 
