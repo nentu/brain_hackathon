@@ -20,9 +20,11 @@ class Logger:
         dir=None,
         checkpoint_dir="checkpoints",
         enabled=True,
+        log_artifacts=True,
     ):
         self.checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
+        self.log_artifacts = log_artifacts
         self.history = []
         self.best_path = None
         self.last_path = None
@@ -64,9 +66,10 @@ class Logger:
         if self.run is not None:
             try:
                 self.run.summary[f"{alias}_model_path"] = path
-                self._wandb.save(
-                    path, base_path=os.path.dirname(os.path.abspath(path))
-                )
+                if self.log_artifacts:
+                    self._wandb.save(
+                        path, base_path=os.path.dirname(os.path.abspath(path))
+                    )
             except Exception:
                 pass
 

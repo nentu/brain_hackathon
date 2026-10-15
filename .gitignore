@@ -11,3 +11,10 @@ wheels/
 
 .tmp
 data/*
+*.ipynb
+.kilo/
+
+# Training artifacts
+wandb/
+checkpoints/
+previews/
