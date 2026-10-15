@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from brain_hackathon.data.dataset import MODALITIES
 from brain_hackathon.train.early_stopping import EarlyStopping
@@ -32,7 +32,7 @@ class TinyModel(nn.Module):
 
 def write_series(class_dir, series_id, shape=(8, 8)):
     os.makedirs(class_dir, exist_ok=True)
-    image = np.arange(np.prod(shape), dtype=np.uint8).reshape(shape)
+    image = np.full(shape, (int(series_id) % 250) + 1, dtype=np.uint8)
     for modality in MODALITIES:
         cv2.imwrite(os.path.join(class_dir, f"{series_id}_{modality}.jpg"), image)
 
@@ -105,6 +105,31 @@ def test_build_optimizer_all_frozen_raises():
         param.requires_grad = False
     with pytest.raises(ValueError):
         build_optimizer(model, "adamw", lr=1e-3, weight_decay=0.0)
+
+
+def test_logger_sets_wandb_env_defaults(monkeypatch, tmp_path):
+    pytest.importorskip("wandb")
+    from brain_hackathon.train.logger import (
+        DEFAULT_WANDB_API_KEY,
+        DEFAULT_WANDB_BASE_URL,
+    )
+
+    monkeypatch.delenv("WANDB_BASE_URL", raising=False)
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+    Logger(mode="disabled", checkpoint_dir=str(tmp_path), enabled=True)
+
+    assert os.environ["WANDB_BASE_URL"] == DEFAULT_WANDB_BASE_URL
+    assert os.environ["WANDB_API_KEY"] == DEFAULT_WANDB_API_KEY
+
+
+def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):
+    pytest.importorskip("wandb")
+    monkeypatch.setenv("WANDB_BASE_URL", "http://example:1234")
+    monkeypatch.setenv("WANDB_API_KEY", "existing-key")
+    Logger(mode="disabled", checkpoint_dir=str(tmp_path), enabled=True)
+
+    assert os.environ["WANDB_BASE_URL"] == "http://example:1234"
+    assert os.environ["WANDB_API_KEY"] == "existing-key"
 
 
 def test_logger_dumps_results(tmp_path):

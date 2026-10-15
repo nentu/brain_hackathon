@@ -4,26 +4,33 @@ import argparse
 import os
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
 from brain_hackathon.train.early_stopping import EarlyStopping
 from brain_hackathon.train.logger import Logger
 from brain_hackathon.train.metrics import METRIC_NAMES, Metrics
 
+# Defaults from the hyperparameter search (best val_loss/F1):
+# adamw, lr=1e-3, weight_decay=0, no freezing (all layers trainable).
+BEST_OPTIMIZER = "adamw"
+BEST_LR = 1e-3
+BEST_WEIGHT_DECAY = 0.0
+BEST_FREEZE_FIRST_N = None
+
 __all__ = [
+    "METRIC_NAMES",
     "EarlyStopping",
     "Logger",
     "Metrics",
-    "METRIC_NAMES",
-    "resolve_device",
     "build_optimizer",
-    "num_classes_of",
     "evaluate",
     "evaluate_loss",
+    "main",
+    "num_classes_of",
+    "resolve_device",
     "save_checkpoint",
     "train",
-    "main",
 ]
 
 
@@ -116,11 +123,11 @@ def train(
     val_dataset,
     test_dataset=None,
     *,
-    optimizer="adamw",
-    lr=1e-3,
+    optimizer=BEST_OPTIMIZER,
+    lr=BEST_LR,
     batch_size=32,
     epochs=50,
-    weight_decay=1e-4,
+    weight_decay=BEST_WEIGHT_DECAY,
     patience=10,
     min_delta=0.0,
     loss_period=50,
@@ -267,11 +274,16 @@ def parse_args(argv=None):
         description="Train RadImageNet on the aligned MRI dataset."
     )
     parser.add_argument("--root", default="data/aligned")
-    parser.add_argument("--optimizer", default="adamw")
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument(
+        "--weights",
+        default=None,
+        help="path to ResNet50.pt (default: download from the Hugging Face Hub)",
+    )
+    parser.add_argument("--optimizer", default=BEST_OPTIMIZER)
+    parser.add_argument("--lr", type=float, default=BEST_LR)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--weight-decay", type=float, default=BEST_WEIGHT_DECAY)
     parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--loss-period", type=int, default=50)
     parser.add_argument("--seed", type=int, default=42)
@@ -304,7 +316,8 @@ def main(argv=None):
     train_ds, val_ds, test_ds = build_datasets(root=args.root)
     model = RadImageNetResNet50(
         dim=len(train_ds.dataset.classes),
-        unfreeze_first_n=args.first_n if args.freeze_all else None,
+        unfreeze_first_n=args.first_n if args.freeze_all else BEST_FREEZE_FIRST_N,
+        weights_path=args.weights,
     )
     logger = Logger(
         project=args.wandb_project,

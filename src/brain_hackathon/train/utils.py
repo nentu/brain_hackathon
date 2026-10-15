@@ -1,8 +1,10 @@
 """Dataset helpers for training.
 
-Build a dataset over all splits and split it into stratified train/val/test subsets.
+Build a dataset over all splits and split it into stratified train/val/test subsets,
+deduplicating by content so identical images never span folds.
 """
 
+import hashlib
 import random
 from collections import defaultdict
 
@@ -31,12 +33,72 @@ def _allocate(total, fractions):
     return counts
 
 
+def _md5(path, block=1 << 16):
+    digest = hashlib.md5()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(block), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def content_groups(index, max_shared_files=4, use_series_identity=True):
+    """Assign each index entry a group id via union-find.
+
+    Entries are merged when they share the same ``(class, series_id)`` or when they
+    share a byte-identical modality file (within the same class). Files shared by more
+    than ``max_shared_files`` series are ignored so a common/blank image cannot chain
+    many unrelated series together.
+    """
+    count = len(index)
+    parent = list(range(count))
+
+    def find(node):
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    def union(a, b):
+        root_a, root_b = find(a), find(b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    if use_series_identity:
+        first_of_series = {}
+        for i, (series_id, class_name, _) in enumerate(index):
+            key = (class_name, series_id)
+            if key in first_of_series:
+                union(i, first_of_series[key])
+            else:
+                first_of_series[key] = i
+
+    by_hash = defaultdict(list)
+    for i, (_, _, modalities) in enumerate(index):
+        for path in modalities.values():
+            by_hash[_md5(path)].append(i)
+
+    for members in by_hash.values():
+        members = sorted(set(members))
+        if len(members) < 2 or len(members) > max_shared_files:
+            continue
+        by_class = defaultdict(list)
+        for i in members:
+            by_class[index[i][1]].append(i)
+        for same_class in by_class.values():
+            if len(same_class) > 1:
+                for other in same_class[1:]:
+                    union(same_class[0], other)
+
+    roots = [find(i) for i in range(count)]
+    remap = {}
+    return [remap.setdefault(root, len(remap)) for root in roots]
+
+
 def stratified_indices(labels, groups=None, fractions=DEFAULT_FRACTIONS, seed=42):
     """Partition sample indices into ``(train, val, test)`` stratified by label.
 
-    ``groups`` optionally assigns each sample to a group (e.g. ``(class, series_id)``);
-    all samples of a group are placed in the same split, so a series never spans folds.
-    Returns three lists of sample indices.
+    ``groups`` optionally assigns each sample to a group; all samples of a group are
+    placed in the same split. Returns three lists of positions into the inputs.
     """
     if len(fractions) != 3:
         raise ValueError("fractions must be (train, val, test)")
@@ -75,6 +137,51 @@ def stratified_indices(labels, groups=None, fractions=DEFAULT_FRACTIONS, seed=42
     return train, val, test
 
 
+def build_split_indices(
+    index,
+    labels,
+    fractions=DEFAULT_FRACTIONS,
+    seed=42,
+    group_by_content=True,
+    dedup=True,
+    max_shared_files=4,
+):
+    """Return ``(train, val, test, removed)`` original dataset indices.
+
+    Duplicate series (same ``(class, id)`` or identical images) are collapsed to one
+    representative and grouped so a group never spans folds.
+    """
+    if group_by_content:
+        groups = content_groups(index, max_shared_files=max_shared_files)
+    else:
+        groups = []
+        seen = {}
+        for series_id, class_name, _ in index:
+            key = (class_name, series_id)
+            groups.append(seen.setdefault(key, len(seen)))
+
+    keep = list(range(len(index)))
+    if dedup:
+        keep = []
+        kept_groups = set()
+        for i, group in enumerate(groups):
+            if group not in kept_groups:
+                kept_groups.add(group)
+                keep.append(i)
+
+    kept_labels = [labels[i] for i in keep]
+    kept_groups = [groups[i] for i in keep]
+    train_pos, val_pos, test_pos = stratified_indices(
+        kept_labels, kept_groups, fractions, seed
+    )
+    return (
+        [keep[p] for p in train_pos],
+        [keep[p] for p in val_pos],
+        [keep[p] for p in test_pos],
+        len(index) - len(keep),
+    )
+
+
 def build_datasets(
     root=DEFAULT_ROOT,
     splits=ALL_SPLITS,
@@ -82,25 +189,37 @@ def build_datasets(
     seed=42,
     train_transform=train_aug,
     eval_transform=val_aug,
+    group_by_content=True,
+    dedup=True,
+    max_shared_files=4,
+    verbose=False,
     **dataset_kwargs,
 ):
     """Build stratified ``(train, val, test)`` subsets over all ``splits``.
 
     The dataset is created once for indexing/labels, then train/val/test are subsets of
     three dataset instances sharing the same index but using ``train_transform`` and
-    ``eval_transform`` respectively. Extra keyword arguments are forwarded to
-    :class:`AlignedMRIClassificationDataset`.
+    ``eval_transform`` respectively. Duplicate series are removed and grouped by content
+    before splitting. Extra keyword arguments go to :class:`AlignedMRIClassificationDataset`.
     """
     dataset_kwargs.pop("augment", None)
     base = AlignedMRIClassificationDataset(root=root, split=splits, **dataset_kwargs)
     labels = [base.class_to_idx[class_name] for _, class_name, _ in base.index]
-    groups = [
-        (class_name, series_id) for series_id, class_name, _ in base.index
-    ]
 
-    train_idx, val_idx, test_idx = stratified_indices(
-        labels, groups, fractions, seed
+    train_idx, val_idx, test_idx, removed = build_split_indices(
+        base.index,
+        labels,
+        fractions,
+        seed,
+        group_by_content=group_by_content,
+        dedup=dedup,
+        max_shared_files=max_shared_files,
     )
+    if verbose:
+        print(
+            f"dedup: {removed} duplicate series removed "
+            f"({len(base.index)} -> {len(base.index) - removed})"
+        )
 
     shared = dict(root=root, split=splits, **dataset_kwargs)
     train_ds = AlignedMRIClassificationDataset(augment=train_transform, **shared)
