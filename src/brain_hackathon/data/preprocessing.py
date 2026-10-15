@@ -94,7 +94,7 @@ def try_variant(kp_ref, des_ref, gray, flip_h, flip_v):
         reproj_error = float(np.mean(errs))
 
     angle = math.degrees(math.atan2(M[1, 0], M[0, 0]))
-    angle = (angle + 180) % 360 - 180  # normalize to [-180, 180]
+    angle = (angle + 180 + 360) % 360 - 180  # normalize to [-180, 180]
 
     return {
         "angle_deg": angle,
@@ -115,20 +115,104 @@ def adapter_image_transforms(transform: dict):
     return transform
 
 
+def circmedian_degrees(angles):
+    """
+    Calculates the circular median of a list of angles in degrees.
+    """
+    angs = np.deg2rad(angles)
+
+    # Create a 2D grid of pairwise differences
+    pdists = angs[np.newaxis, :] - angs[:, np.newaxis]
+
+    # Normalize differences to the [-pi, pi] range to handle wrap-around
+    pdists = (pdists + np.pi) % (2 * np.pi) - np.pi
+
+    # Find the sum of absolute distances for each angle candidate
+    total_distances = np.abs(pdists).sum(axis=1)
+
+    # Return the angle (converted back to degrees) that minimizes total distance
+    median_rad = angs[np.argmin(total_distances)]
+    return np.degrees(median_rad) % 360
+
+
+def _flip_code(transform):
+    return (1 if transform["flip_horizontal"] else 0) | (
+        2 if transform["flip_vertical"] else 0
+    )
+
+
+def compose_transforms(first, second):
+    """Return first ∘ second (apply `second` to the image first, then `first`).
+
+    A transform is rotation applied after an optional flip, matching
+    ``apply_augmentation``. Reflections conjugate the rotation, hence the sign flip.
+    """
+    s_first = _flip_code(first)
+    s_second = _flip_code(second)
+    sigma = -1 if s_first in (1, 2) else 1
+    s = s_first ^ s_second
+    angle = (first["angle_deg"] + sigma * second["angle_deg"] + 180) % 360 - 180
+    return {
+        "angle_deg": angle,
+        "flip_horizontal": bool(s & 1),
+        "flip_vertical": bool(s & 2),
+    }
+
+
+def invert_transform(transform):
+    s = _flip_code(transform)
+    sigma = -1 if s in (1, 2) else 1
+    return {
+        "angle_deg": (-sigma * transform["angle_deg"] + 180) % 360 - 180,
+        "flip_horizontal": bool(s & 1),
+        "flip_vertical": bool(s & 2),
+    }
+
+
+def _transform_distance(a, b):
+    d = compose_transforms(invert_transform(a), b)
+    flip_penalty = 0.0 if _flip_code(a) == _flip_code(b) else 180.0
+    return abs(d["angle_deg"]) + flip_penalty
+
+
 def center_transforms(transform_list):
-    transform_list = transform_list.copy()
-    for k in transform_list[0]:
-        median = np.median([i[k] for i in transform_list])
-        for item in transform_list:
-            item[k] = item[k] - median
-    return transform_list
+    """Rotate the whole group so the median transform becomes the identity.
+
+    The reference image passed to :func:`process_images` can itself be rotated or
+    flipped, which would tilt every other modality. Here the medoid transform in the
+    dihedral group (rotation + optional reflection) is picked and its inverse is
+    left-multiplied onto every transform. The reference frame then matches the
+    majority orientation instead of the (possibly augmented) reference image.
+    """
+    valid = [t for t in transform_list if t.get("angle_deg") is not None]
+    if len(valid) < 2:
+        return [dict(t) for t in transform_list]
+
+    median = min(valid, key=lambda c: sum(_transform_distance(c, t) for t in valid))
+    median_inv = invert_transform(median)
+
+    centered_list = []
+    for transform in transform_list:
+        if transform.get("angle_deg") is None:
+            centered_list.append(dict(transform))
+            continue
+        centered = compose_transforms(median_inv, transform)
+        centered.update(
+            {
+                k: v
+                for k, v in transform.items()
+                if k not in ("angle_deg", "flip_horizontal", "flip_vertical")
+            }
+        )
+        centered_list.append(centered)
+    return centered_list
 
 
 def process_images(img_list):
     for i in range(len(img_list)):
         if len(img_list[i].shape) != 2:
             img_list[i] = cv2.cvtColor(img_list[i], cv2.COLOR_BGR2GRAY)
-    ref_gray = img_list[0]
+    ref_gray = img_list[0]  # TODO FIX результат зависит от id.
 
     kp_ref, des_ref = features(ref_gray)
     results = []
