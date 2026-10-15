@@ -1,5 +1,5 @@
 [project]
-name = "brain-hackaton"
+name = "brain-hackathon"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,8 +7,14 @@ authors = [
     { name = "Zaytsev Artem", email = "zajtsev.artjom@samlit.net" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "wget>=3.2",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.30,<0.10.0"]
 build-backend = "uv_build"
+
+[project.scripts]
+
+download_data = "brain_hackathon.data.download:main"

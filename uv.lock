@@ -3,6 +3,18 @@ revision = 3
 requires-python = ">=3.14"
 
 [[package]]
-name = "brain-hackaton"
+name = "brain-hackathon"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "wget" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "wget", specifier = ">=3.2" }]
+
+[[package]]
+name = "wget"
+version = "3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/6a/62e288da7bcda82b935ff0c6cfe542970f04e29c756b0e147251b2fb251f/wget-3.2.zip", hash = "sha256:35e630eca2aa50ce998b9b1a127bb26b30dfee573702782aa982f875e3f16061", size = 10857, upload-time = "2015-10-22T15:26:37.51Z" }
