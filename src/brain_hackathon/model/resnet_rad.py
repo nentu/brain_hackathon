@@ -1,8 +1,8 @@
 import os
 
 import torch
-import torch.nn as nn
 from huggingface_hub import hf_hub_download
+from torch import nn
 from torchvision.models import resnet50
 
 # Optional environment override for the checkpoint path (e.g. weights mounted from a

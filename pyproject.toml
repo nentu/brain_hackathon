@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib>=3.5",
     "opencv-python>=4.5",
     "plotly>=5.0",
+    "ruff>=0.17.1",
     "torch>=2.1",
     "torchvision>=0.16",
     "wandb>=0.17",

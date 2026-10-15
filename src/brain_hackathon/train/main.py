@@ -4,7 +4,7 @@ import argparse
 import os
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
 from brain_hackathon.train.early_stopping import EarlyStopping
@@ -19,18 +19,18 @@ BEST_WEIGHT_DECAY = 0.0
 BEST_FREEZE_FIRST_N = None
 
 __all__ = [
+    "METRIC_NAMES",
     "EarlyStopping",
     "Logger",
     "Metrics",
-    "METRIC_NAMES",
-    "resolve_device",
     "build_optimizer",
-    "num_classes_of",
     "evaluate",
     "evaluate_loss",
+    "main",
+    "num_classes_of",
+    "resolve_device",
     "save_checkpoint",
     "train",
-    "main",
 ]
 
 

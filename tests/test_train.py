@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from brain_hackathon.data.dataset import MODALITIES
 from brain_hackathon.train.early_stopping import EarlyStopping
