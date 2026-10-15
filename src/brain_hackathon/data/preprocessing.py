@@ -115,6 +115,15 @@ def adapter_image_transforms(transform: dict):
     return transform
 
 
+def center_transforms(transform_list):
+    transform_list = transform_list.copy()
+    for k in transform_list[0]:
+        median = np.median([i[k] for i in transform_list])
+        for item in transform_list:
+            item[k] = item[k] - median
+    return transform_list
+
+
 def process_images(img_list):
     for i in range(len(img_list)):
         if len(img_list[i].shape) != 2:
@@ -167,7 +176,8 @@ def process_images(img_list):
                 }
             )
 
-    return [adapter_image_transforms(i) for i in results]
+    results = [adapter_image_transforms(i) for i in results]
+    results = center_transforms(results)
     return results
 
 
