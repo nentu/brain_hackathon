@@ -1,7 +1,13 @@
+import os
+
 import torch
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
 from torchvision.models import resnet50
+
+# Optional environment override for the checkpoint path (e.g. weights mounted from a
+# read-only dataset instead of downloading from the Hub).
+WEIGHTS_ENV = "BRAIN_HACKATHON_WEIGHTS"
 
 
 class RadImageNetResNet50(nn.Module):
@@ -30,12 +36,18 @@ class RadImageNetResNet50(nn.Module):
         device=None,
         verbose=True,
         unfreeze_first_n=None,
+        weights_path=None,
+        cache_dir=None,
+        local_files_only=False,
     ):
         super().__init__()
         self.dim = dim
         self.in_channels = in_channels
         self.input_size = (in_channels, 224, 224)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.weights_path = weights_path
+        self.cache_dir = cache_dir
+        self.local_files_only = local_files_only
 
         self.backbone = nn.Sequential(*list(resnet50(weights=None).children())[:-2])
         self._load_pretrained_backbone()
@@ -67,8 +79,19 @@ class RadImageNetResNet50(nn.Module):
             param.requires_grad = True
         return self
 
+    def _resolve_weights_path(self):
+        path = self.weights_path or os.environ.get(WEIGHTS_ENV)
+        if path:
+            return path
+        return hf_hub_download(
+            repo_id=self.repo_id,
+            filename=self.filename,
+            cache_dir=self.cache_dir,
+            local_files_only=self.local_files_only,
+        )
+
     def _load_pretrained_backbone(self):
-        model_path = hf_hub_download(repo_id=self.repo_id, filename=self.filename)
+        model_path = self._resolve_weights_path()
         state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
         backbone_state = {
             key[len("backbone.") :]: value

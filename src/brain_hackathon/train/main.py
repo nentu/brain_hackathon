@@ -274,6 +274,11 @@ def parse_args(argv=None):
         description="Train RadImageNet on the aligned MRI dataset."
     )
     parser.add_argument("--root", default="data/aligned")
+    parser.add_argument(
+        "--weights",
+        default=None,
+        help="path to ResNet50.pt (default: download from the Hugging Face Hub)",
+    )
     parser.add_argument("--optimizer", default=BEST_OPTIMIZER)
     parser.add_argument("--lr", type=float, default=BEST_LR)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -312,6 +317,7 @@ def main(argv=None):
     model = RadImageNetResNet50(
         dim=len(train_ds.dataset.classes),
         unfreeze_first_n=args.first_n if args.freeze_all else BEST_FREEZE_FIRST_N,
+        weights_path=args.weights,
     )
     logger = Logger(
         project=args.wandb_project,

@@ -6,16 +6,16 @@ readme = "README.md"
 authors = [
     { name = "Zaytsev Artem", email = "zajtsev.artjom@samlit.net" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "albumentations>=2.0.8",
-    "huggingface-hub>=2.2.0",
-    "matplotlib>=3.11.2",
-    "opencv-python>=5.0.0.93",
-    "plotly>=7.1.0",
-    "pytest>=9.1.1",
-    "torch>=2.14.1",
-    "torchvision>=0.29.1",
+    "huggingface-hub>=0.23",
+    "matplotlib>=3.5",
+    "opencv-python>=4.5",
+    "plotly>=5.0",
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "wandb>=0.17",
     "wget>=3.2",
 ]
 
@@ -25,8 +25,8 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "ipykernel>=7.4.0",
-    "wandb>=0.30.0",
+    "ipykernel>=6.0",
+    "pytest>=7.0",
 ]
 
 [project.scripts]
