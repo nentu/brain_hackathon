@@ -23,7 +23,14 @@ class RadImageNetResNet50(nn.Module):
     filename = "ResNet50.pt"
     feature_dim = 2048
 
-    def __init__(self, dim=4, in_channels=6, device=None, verbose=True):
+    def __init__(
+        self,
+        dim=4,
+        in_channels=6,
+        device=None,
+        verbose=True,
+        unfreeze_first_n=None,
+    ):
         super().__init__()
         self.dim = dim
         self.in_channels = in_channels
@@ -39,9 +46,26 @@ class RadImageNetResNet50(nn.Module):
         nn.init.xavier_uniform_(self.head.weight)
         nn.init.zeros_(self.head.bias)
 
+        if unfreeze_first_n is not None:
+            self.freeze_all_except(unfreeze_first_n)
+
         self.to(self.device).eval()
         if verbose:
             self.print_input_shape()
+
+    def freeze_all_except(self, first_n=0):
+        """Freeze all parameters except the first ``first_n`` backbone layers and the head.
+
+        With ``first_n=0`` only the classifier head stays trainable.
+        """
+        for param in self.parameters():
+            param.requires_grad = False
+        for layer in list(self.backbone.children())[: max(int(first_n), 0)]:
+            for param in layer.parameters():
+                param.requires_grad = True
+        for param in self.head.parameters():
+            param.requires_grad = True
+        return self
 
     def _load_pretrained_backbone(self):
         model_path = hf_hub_download(repo_id=self.repo_id, filename=self.filename)
