@@ -8,12 +8,20 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "matplotlib>=3.11.2",
+    "opencv-python>=5.0.0.93",
+    "plotly>=7.1.0",
     "wget>=3.2",
 ]
 
 [build-system]
 requires = ["uv_build>=0.9.30,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+]
 
 [project.scripts]
 
