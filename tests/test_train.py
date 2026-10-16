@@ -10,7 +10,7 @@ from torch import nn
 from brain_hackathon.data.dataset import MODALITIES
 from brain_hackathon.train.early_stopping import EarlyStopping
 from brain_hackathon.train.logger import Logger
-from brain_hackathon.train.main import build_optimizer, train
+from brain_hackathon.train.main import BEST_OPTIMIZER, build_optimizer, train
 from brain_hackathon.train.metrics import Metrics
 from brain_hackathon.train.utils import build_datasets
 
@@ -173,7 +173,7 @@ def test_train_logs_config(aligned_root, tmp_path):
     )
 
     assert logger.config["lr"] == 1e-3
-    assert logger.config["optimizer"] == "adamw"
+    assert logger.config["optimizer"] == BEST_OPTIMIZER
     assert logger.config["batch_size"] == 4
     assert logger.config["n_train"] == len(train_ds)
     assert logger.config["n_params"] > 0
@@ -263,8 +263,8 @@ def test_train_early_stopping_and_checkpoints(aligned_root, tmp_path):
     assert result["step_test_losses"]
 
     record = result["history"][0]
-    assert "train/loss" in record and "val/loss" in record
-    assert "val/acc" in record and "test/loss" in record
+    assert "loss/train" in record and "loss/val" in record
+    assert "acc/val" in record and "loss/test" in record
 
 
 def test_train_saves_best_and_last_paths(aligned_root, tmp_path):

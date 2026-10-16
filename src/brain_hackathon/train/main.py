@@ -251,9 +251,9 @@ def train(
         record = {
             "global_step": global_step,
             "loss/train": train_loss,
-            **{f"train/{k}": v for k, v in metrics.compute().items()},
+            **{f"{k}/train": v for k, v in metrics.compute().items()},
             "loss/val": val_loss,
-            **{f"val/{k}": v for k, v in val_metrics.items()},
+            **{f"{k}/val": v for k, v in val_metrics.items()},
             "lr": opt.param_groups[0]["lr"],
         }
         if test_loader is not None:
@@ -261,7 +261,7 @@ def train(
                 model, test_loader, criterion, device, num_classes
             )
             record["loss/test"] = test_loss
-            record.update({f"test/{k}": v for k, v in test_metrics.items()})
+            record.update({f"{k}/test": v for k, v in test_metrics.items()})
 
         history.append(record)
         if logger is not None:
