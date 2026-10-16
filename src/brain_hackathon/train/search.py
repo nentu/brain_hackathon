@@ -72,11 +72,11 @@ def evaluate_config(config, context):
     return {
         **config,
         "epochs_run": result["epochs_run"],
-        "train_loss": last["train/loss"],
-        "val_loss": last["val/loss"],
+        "train_loss": last["loss/train"],
+        "val_loss": last["loss/val"],
         "val_acc": last["val/acc"],
         "val_f1": last["val/f1"],
-        "test_loss": last.get("test/loss"),
+        "test_loss": last.get("loss/test"),
         "test_acc": last.get("test/acc"),
         "test_f1": last.get("test/f1"),
     }

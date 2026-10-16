@@ -44,8 +44,8 @@ def build_optimizer(model, optimizer, lr, weight_decay):
     """Resolve ``optimizer`` (name, class or instance) with AdamW as the default."""
     if isinstance(optimizer, torch.optim.Optimizer):
         return optimizer
-    if isinstance(optimizer, str):
-        name = optimizer.lower()
+    name = optimizer.lower() if isinstance(optimizer, str) else None
+    if name is not None:
         if name in ("adamw", "adam_w"):
             cls = torch.optim.AdamW
         elif name == "adam":
@@ -61,6 +61,10 @@ def build_optimizer(model, optimizer, lr, weight_decay):
     params = [param for param in model.parameters() if param.requires_grad]
     if not params:
         raise ValueError("no trainable parameters (all layers are frozen)")
+    if name == "sgd":
+        return cls(
+            params, lr=lr, weight_decay=weight_decay, nesterov=True, momentum=0.9
+        )
     return cls(params, lr=lr, weight_decay=weight_decay)
 
 
@@ -237,7 +241,7 @@ def train(
                 test_step_loss = evaluate_loss(model, test_loader, criterion, device)
                 step_test_losses.append((global_step, test_step_loss))
                 if logger is not None:
-                    logger.log({"test/loss_step": test_step_loss}, step=global_step)
+                    logger.log({"test_step/loss": test_step_loss}, step=global_step)
 
         train_loss = running / max(count, 1)
         val_loss, val_metrics = evaluate(
@@ -246,9 +250,9 @@ def train(
 
         record = {
             "global_step": global_step,
-            "train/loss": train_loss,
+            "loss/train": train_loss,
             **{f"train/{k}": v for k, v in metrics.compute().items()},
-            "val/loss": val_loss,
+            "loss/val": val_loss,
             **{f"val/{k}": v for k, v in val_metrics.items()},
             "lr": opt.param_groups[0]["lr"],
         }
@@ -256,7 +260,7 @@ def train(
             test_loss, test_metrics = evaluate(
                 model, test_loader, criterion, device, num_classes
             )
-            record["test/loss"] = test_loss
+            record["loss/test"] = test_loss
             record.update({f"test/{k}": v for k, v in test_metrics.items()})
 
         history.append(record)
