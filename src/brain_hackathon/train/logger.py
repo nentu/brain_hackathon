@@ -2,11 +2,25 @@
 
 import json
 import os
+import subprocess
 
 # Default W&B server (local dev instance). Override with the WANDB_BASE_URL /
 # WANDB_API_KEY environment variables for a real deployment.
-DEFAULT_WANDB_BASE_URL = "http://91.149.221.112:8080"
+DEFAULT_WANDB_BASE_URL = "http://localhost:8080"
 DEFAULT_WANDB_API_KEY = "local0000000000000000000000000000000000000000"
+
+
+def git_hash():
+    """Short current git commit hash, or None when unavailable."""
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except Exception:
+        return None
 
 
 class Logger:
@@ -38,6 +52,9 @@ class Logger:
         self.run = None
         self._wandb = None
         self.config = dict(config) if config else {}
+        commit = git_hash()
+        if commit is not None:
+            self.config.setdefault("git_hash", commit)
 
         self.enabled = enabled
         if self.enabled:
@@ -52,7 +69,7 @@ class Logger:
                 self.run = wandb.init(
                     project=project,
                     name=run_name,
-                    config=config,
+                    config=self.config,
                     mode=mode,
                     dir=dir,
                 )

@@ -132,10 +132,20 @@ def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):
     assert os.environ["WANDB_API_KEY"] == "existing-key"
 
 
+def test_logger_config_includes_git_hash(monkeypatch, tmp_path):
+    from brain_hackathon.train import logger as logger_module
+
+    monkeypatch.setattr(logger_module, "git_hash", lambda: "abc1234")
+    logger = Logger(checkpoint_dir=str(tmp_path), enabled=False, config={"lr": 1e-3})
+    assert logger.config["git_hash"] == "abc1234"
+    assert logger.config["lr"] == 1e-3
+
+
 def test_log_config_stores_and_merges(tmp_path):
     logger = Logger(checkpoint_dir=str(tmp_path), enabled=False, config={"a": 1})
     logger.log_config({"b": 2})
-    assert logger.config == {"a": 1, "b": 2}
+    assert logger.config["a"] == 1
+    assert logger.config["b"] == 2
 
 
 def test_train_logs_config(aligned_root, tmp_path):
