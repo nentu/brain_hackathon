@@ -85,7 +85,7 @@ class Logger:
             self.best_path = path
         elif alias == "last":
             self.last_path = path
-        if self.run is not None:
+        if (self.run is not None) and (alias == "best"):
             try:
                 self.run.summary[f"{alias}_model_path"] = path
                 if self.log_artifacts:
