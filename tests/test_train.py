@@ -107,19 +107,21 @@ def test_build_optimizer_all_frozen_raises():
         build_optimizer(model, "adamw", lr=1e-3, weight_decay=0.0)
 
 
-def test_logger_sets_wandb_env_defaults(monkeypatch, tmp_path):
+def test_logger_sets_wandb_env_when_provided(monkeypatch, tmp_path):
     pytest.importorskip("wandb")
-    from brain_hackathon.train.logger import (
-        DEFAULT_WANDB_API_KEY,
-        DEFAULT_WANDB_BASE_URL,
-    )
-
     monkeypatch.delenv("WANDB_BASE_URL", raising=False)
     monkeypatch.delenv("WANDB_API_KEY", raising=False)
-    Logger(mode="disabled", checkpoint_dir=str(tmp_path), enabled=True)
 
-    assert os.environ["WANDB_BASE_URL"] == DEFAULT_WANDB_BASE_URL
-    assert os.environ["WANDB_API_KEY"] == DEFAULT_WANDB_API_KEY
+    Logger(
+        mode="disabled",
+        checkpoint_dir=str(tmp_path),
+        enabled=True,
+        base_url="http://host:1234",
+        api_key="explicit-key",
+    )
+
+    assert os.environ["WANDB_BASE_URL"] == "http://host:1234"
+    assert os.environ["WANDB_API_KEY"] == "explicit-key"
 
 
 def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):

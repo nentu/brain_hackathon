@@ -4,11 +4,6 @@ import json
 import os
 import subprocess
 
-# Default W&B server (local dev instance). Override with the WANDB_BASE_URL /
-# WANDB_API_KEY environment variables for a real deployment.
-DEFAULT_WANDB_BASE_URL = "http://localhost:8080"
-DEFAULT_WANDB_API_KEY = "local0000000000000000000000000000000000000000"
-
 
 def git_hash():
     """Short current git commit hash, or None when unavailable."""
@@ -40,8 +35,8 @@ class Logger:
         checkpoint_dir="checkpoints",
         enabled=True,
         log_artifacts=True,
-        base_url=DEFAULT_WANDB_BASE_URL,
-        api_key=DEFAULT_WANDB_API_KEY,
+        base_url=None,
+        api_key=None,
     ):
         self.checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -58,6 +53,8 @@ class Logger:
 
         self.enabled = enabled
         if self.enabled:
+            # W&B reads WANDB_BASE_URL / WANDB_API_KEY from the environment. Only set
+            # them here when explicitly provided; otherwise the env vars are used as-is.
             if base_url:
                 os.environ.setdefault("WANDB_BASE_URL", base_url)
             if api_key:
