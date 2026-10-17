@@ -20,7 +20,7 @@ from brain_hackathon.train.metrics import Metrics
 # Defaults from the hyperparameter search (best val_loss/F1).
 BEST_OPTIMIZER = "adamw"
 BEST_LR = 1e-3
-BEST_WEIGHT_DECAY = 0  # 1e-4
+BEST_WEIGHT_DECAY = 1e-4  # 1e-4
 
 
 def train(

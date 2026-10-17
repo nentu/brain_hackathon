@@ -86,7 +86,7 @@ def parse_args(argv=None):
     parser.add_argument("--optimizer", default=BEST_OPTIMIZER)
     parser.add_argument("--lr", type=float, default=BEST_LR)
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--weight-decay", type=float, default=BEST_WEIGHT_DECAY)
     parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--loss-period", type=int, default=50)
