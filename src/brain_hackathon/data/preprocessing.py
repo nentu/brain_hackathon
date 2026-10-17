@@ -3,6 +3,14 @@ import math
 import cv2
 import numpy as np
 
+IMAGE_SIZE = (224, 224)
+
+
+def resize_image(image, size=IMAGE_SIZE):
+    """Resize to ``size`` (width, height) using ``cv2.INTER_AREA``."""
+    return cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+
+
 ORB = cv2.ORB_create(
     nfeatures=3000,
     scaleFactor=1.2,

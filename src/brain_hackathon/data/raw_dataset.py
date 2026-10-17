@@ -13,6 +13,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from brain_hackathon.data.preprocessing import resize_image
+
 RAW_ROOT = os.path.join("data", "Epic and CSCR hospital Dataset")
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
 MODALITY_STEM = re.compile(r"^(?P<stem>.+)_(?P<id>\d+)_(?P<modality>[A-Za-z]{2})_$")
@@ -166,11 +168,7 @@ class RawImageDataset(Dataset):
             raise RuntimeError(f"cannot read image: {path}")
 
         if self.image_size is not None:
-            image = cv2.resize(
-                image,
-                (self.image_size, self.image_size),
-                interpolation=cv2.INTER_AREA,
-            )
+            image = resize_image(image, (self.image_size, self.image_size))
 
         array = image.astype(np.float32)
         if self.normalize:

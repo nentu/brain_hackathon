@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
+from brain_hackathon.data.preprocessing import IMAGE_SIZE, resize_image
 from brain_hackathon.data.raw_dataset import (
     RawImageDataset,
     base_image_path,
@@ -39,6 +40,13 @@ def raw_root(tmp_path):
     write_image(glioma / "G_4_BR_.jpg", 41)
 
     return str(root)
+
+
+def test_resize_image_uses_224_inter_area():
+    image = np.zeros((10, 20), dtype=np.uint8)
+    resized = resize_image(image)
+    assert resized.shape == (IMAGE_SIZE[1], IMAGE_SIZE[0])
+    assert resized.shape == (224, 224)
 
 
 def test_base_image_path(raw_root):
