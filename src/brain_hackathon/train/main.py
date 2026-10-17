@@ -76,11 +76,14 @@ def main(argv=None):
 
     args = parse_args(argv)
 
-    train_ds, val_ds, test_ds = build_datasets(root=args.root)
+    train_ds, val_ds, test_ds = build_datasets(root=args.root, verbose=True)
     model = RadImageNetResNet50(
         dim=[len(train_ds.dataset.classes)],
         freeze_backbone=args.freeze,
         weights_path=args.weights,
+    )
+    print(
+        f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True
     )
     logger = Logger(
         project=args.wandb_project,

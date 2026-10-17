@@ -37,6 +37,7 @@ def train(
     patience=10,
     min_delta=0.0,
     loss_period=50,
+    log_every=5,
     device=None,
     logger=None,
     num_workers=0,
@@ -51,6 +52,12 @@ def train(
     """
     torch.manual_seed(seed)
     device = resolve_device(device)
+    optimizer_name = optimizer if isinstance(optimizer, str) else type(optimizer).__name__
+    print(
+        f"[train] device={device} epochs={epochs} batch_size={batch_size} "
+        f"optimizer={optimizer_name} lr={lr}",
+        flush=True,
+    )
     model.to(device)
 
     train_loader = DataLoader(
@@ -165,6 +172,23 @@ def train(
             )
             record["loss/test"] = test_loss
             record.update({f"{k}/test": v for k, v in test_metrics.items()})
+
+        if log_every and (
+            epoch == 1 or epoch % log_every == 0 or epoch == epochs
+        ):
+            message = (
+                f"[epoch {epoch:3d}] loss train={record['loss/train']:.4f} "
+                f"val={record['loss/val']:.4f}"
+            )
+            if "loss/test" in record:
+                message += f" test={record['loss/test']:.4f}"
+            message += f" | val acc={record['acc/val']:.4f} f1={record['f1/val']:.4f}"
+            if "acc/test" in record:
+                message += (
+                    f" | test acc={record['acc/test']:.4f} "
+                    f"f1={record['f1/test']:.4f}"
+                )
+            print(message, flush=True)
 
         history.append(record)
         if logger is not None:

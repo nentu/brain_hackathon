@@ -81,6 +81,24 @@ def run_cross_validation(
         train_labels, train_groups, n_splits=n_splits, seed=seed
     )
 
+    if verbose:
+        print(
+            f"[cv] root={root!r} classes={base.classes} series={len(base.index)}",
+            flush=True,
+        )
+        print(f"[cv] dedup kept {len(keep)}/{len(base.index)}", flush=True)
+        print(
+            f"[cv] split {round(train_frac * 100)}/"
+            f"{round((1 - train_frac) * 100)}: "
+            f"train={len(train_orig)} test={len(test_orig)}",
+            flush=True,
+        )
+        print(
+            f"[cv] {n_splits}-fold val sizes="
+            f"{[len(val) for _, val in folds]}",
+            flush=True,
+        )
+
     train_ds = AlignedMRIClassificationDataset(
         root=root, split=ALL_SPLITS, augment=train_aug
     )

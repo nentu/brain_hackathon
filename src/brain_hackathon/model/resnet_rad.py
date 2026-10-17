@@ -101,7 +101,13 @@ class RadImageNetResNet50(nn.Module):
     def _resolve_weights_path(self):
         path = self.weights_path or os.environ.get(WEIGHTS_ENV)
         if path:
+            print(f"[model] loading pretrained weights from {path}", flush=True)
             return path
+        print(
+            f"[model] loading pretrained weights from HF: "
+            f"{self.repo_id}/{self.filename}",
+            flush=True,
+        )
         return hf_hub_download(
             repo_id=self.repo_id,
             filename=self.filename,
@@ -122,6 +128,7 @@ class RadImageNetResNet50(nn.Module):
             raise RuntimeError(f"unexpected checkpoint keys: {unexpected[:5]}")
         if missing:
             raise RuntimeError(f"missing checkpoint keys: {missing[:5]}")
+        print(f"[model] backbone loaded: {len(backbone_state)} tensors", flush=True)
 
     def _expand_first_conv(self, in_channels):
         conv = self.backbone[0]

@@ -265,8 +265,19 @@ def build_datasets(
         )
     if verbose:
         print(
-            f"dedup: {removed} duplicate series removed "
-            f"({len(base.index)} -> {len(base.index) - removed})"
+            f"[data] root={root!r} splits={tuple(splits)!r} "
+            f"classes={base.classes}",
+            flush=True,
+        )
+        print(
+            f"[data] dedup: {removed} removed "
+            f"({len(base.index)} -> {len(base.index) - removed})",
+            flush=True,
+        )
+        print(
+            f"[data] split sizes: train={len(train_idx)} val={len(val_idx)} "
+            f"test={len(test_idx)}",
+            flush=True,
         )
 
     shared = dict(root=root, split=splits, **dataset_kwargs)
