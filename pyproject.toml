@@ -41,6 +41,7 @@ train_model = "brain_hackathon.train.main:main"
 search_hparams = "brain_hackathon.train.search:main"
 report_hparams = "brain_hackathon.train.report:main"
 train = "brain_hackathon.train.main:main"
+t-sne = "brain_hackathon.model.tsne:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
