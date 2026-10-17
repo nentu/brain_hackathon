@@ -131,8 +131,12 @@ class RadImageNetResNet50(nn.Module):
                 expanded.bias.copy_(conv.bias.detach())
         self.backbone[0] = expanded
 
+    def forward_features(self, x):
+        """Pooled ``feature_dim`` features from the pretrained backbone (no head)."""
+        return torch.flatten(self.pool(self.backbone(x)), 1)
+
     def forward(self, x):
-        return self.head(torch.flatten(self.pool(self.backbone(x)), 1))
+        return self.head(self.forward_features(x))
 
     @torch.no_grad()
     def print_input_shape(self):
