@@ -71,6 +71,10 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
+    import torch
+    from torch import nn
+    from torch.utils.data import DataLoader
+
     from brain_hackathon.model.resnet_rad import RadImageNetResNet50
     from brain_hackathon.train.utils import build_datasets
 
@@ -83,6 +87,10 @@ def main(argv=None):
         weights_path=args.weights,
     )
     print(f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True)
+    print(
+        "[data] Test is not used during training; only the best model is evaluated",
+        flush=True,
+    )
     logger = Logger(
         project=args.wandb_project,
         mode=args.wandb_mode,
@@ -90,11 +98,12 @@ def main(argv=None):
         enabled=not args.no_wandb,
         config=vars(args),
     )
-    return train(
+    # Train/val only: no test loss, no test-based early stopping.
+    result = train(
         model,
         train_ds,
         val_ds,
-        test_ds,
+        None,
         optimizer=args.optimizer,
         lr=args.lr,
         batch_size=args.batch_size,
@@ -106,6 +115,40 @@ def main(argv=None):
         checkpoint_dir=args.checkpoint_dir,
         seed=args.seed,
     )
+
+    # Evaluate Test once, using the best-val checkpoint.
+    device = next(model.parameters()).device
+    if result["best_model_path"]:
+        checkpoint = torch.load(
+            result["best_model_path"], map_location=device, weights_only=True
+        )
+        model.load_state_dict(checkpoint["model"])
+
+    test_loader = DataLoader(
+        test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
+    )
+    test_loss, test_metrics = evaluate(
+        model,
+        test_loader,
+        nn.CrossEntropyLoss(),
+        device,
+        len(test_ds.dataset.classes),
+    )
+    print(
+        f"[test] loss={test_loss:.4f} "
+        + " ".join(f"{key}={value:.4f}" for key, value in test_metrics.items()),
+        flush=True,
+    )
+    result["test_loss"] = test_loss
+    result["test_metrics"] = test_metrics
+
+    print(
+        f"[done] epochs={result['epochs_run']} "
+        f"best_val_loss={result['best_val_loss']:.4f} "
+        f"best={result['best_model_path']}",
+        flush=True,
+    )
+    return 0
 
 
 if __name__ == "__main__":
