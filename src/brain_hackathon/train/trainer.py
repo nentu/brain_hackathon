@@ -19,8 +19,8 @@ from brain_hackathon.train.metrics import Metrics
 
 # Defaults from the hyperparameter search (best val_loss/F1).
 BEST_OPTIMIZER = "adamw"
-BEST_LR = 2e-3
-BEST_WEIGHT_DECAY = 1e-4
+BEST_LR = 1e-3
+BEST_WEIGHT_DECAY = 0  # 1e-4
 
 
 def train(
@@ -52,7 +52,9 @@ def train(
     """
     torch.manual_seed(seed)
     device = resolve_device(device)
-    optimizer_name = optimizer if isinstance(optimizer, str) else type(optimizer).__name__
+    optimizer_name = (
+        optimizer if isinstance(optimizer, str) else type(optimizer).__name__
+    )
     print(
         f"[train] device={device} epochs={epochs} batch_size={batch_size} "
         f"optimizer={optimizer_name} lr={lr}",
@@ -173,9 +175,7 @@ def train(
             record["loss/test"] = test_loss
             record.update({f"{k}/test": v for k, v in test_metrics.items()})
 
-        if log_every and (
-            epoch == 1 or epoch % log_every == 0 or epoch == epochs
-        ):
+        if log_every and (epoch == 1 or epoch % log_every == 0 or epoch == epochs):
             message = (
                 f"[epoch {epoch:3d}] loss train={record['loss/train']:.4f} "
                 f"val={record['loss/val']:.4f}"
@@ -185,8 +185,7 @@ def train(
             message += f" | val acc={record['acc/val']:.4f} f1={record['f1/val']:.4f}"
             if "acc/test" in record:
                 message += (
-                    f" | test acc={record['acc/test']:.4f} "
-                    f"f1={record['f1/test']:.4f}"
+                    f" | test acc={record['acc/test']:.4f} f1={record['f1/test']:.4f}"
                 )
             print(message, flush=True)
 
