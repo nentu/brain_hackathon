@@ -8,13 +8,13 @@ import os
 from brain_hackathon.data.dataset import DEFAULT_ROOT
 from brain_hackathon.model.resnet_rad import RadImageNetResNet50
 from brain_hackathon.train.logger import Logger
-from brain_hackathon.train.main import train
+from brain_hackathon.train.trainer import train
 from brain_hackathon.train.utils import build_datasets
 
 DEFAULT_OPTIMIZERS = ("adamw", "sgd")
 DEFAULT_LRS = (1e-2, 1e-3, 1e-4)
 DEFAULT_WEIGHT_DECAYS = (0.0, 1e-4, 1e-2)
-DEFAULT_FREEZES = (None, 0, 2)
+DEFAULT_FREEZES = (None, 0)
 
 
 def iter_configs(optimizers, lrs, weight_decays, freezes):
@@ -44,9 +44,9 @@ def config_name(config):
 def evaluate_config(config, context):
     """Train one configuration and return its final-epoch metrics."""
     model = RadImageNetResNet50(
-        dim=context["num_classes"],
+        dim=[context["num_classes"]],
         verbose=False,
-        unfreeze_first_n=config["freeze_first_n"],
+        freeze_backbone=config["freeze_first_n"] is not None,
     )
     logger_factory = context.get("logger_factory")
     logger = logger_factory(config) if logger_factory is not None else None

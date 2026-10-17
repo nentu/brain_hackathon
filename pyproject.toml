@@ -9,9 +9,9 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "albumentations>=2.0.8",
-    "dash>=2.16",
     "huggingface-hub>=0.23",
     "matplotlib>=3.5",
+    "nbformat>=5.11.1",
     "opencv-python>=4.5",
     "plotly>=5.0",
     "ruff>=0.17.1",
@@ -27,6 +27,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "dash>=2.16",
     "ipykernel>=6.0",
     "pandas>=2.3.3",
     "pytest>=7.0",
@@ -41,6 +42,8 @@ preview_data = "brain_hackathon.data.preview:main"
 train_model = "brain_hackathon.train.main:main"
 search_hparams = "brain_hackathon.train.search:main"
 report_hparams = "brain_hackathon.train.report:main"
+fetch_model = "brain_hackathon.train.fetch_model:main"
+cross_validate = "brain_hackathon.train.cross_validate:main"
 train = "brain_hackathon.train.main:main"
 t-sne = "brain_hackathon.model.tsne:main"
 

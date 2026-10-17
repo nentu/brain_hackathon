@@ -137,6 +137,43 @@ def stratified_indices(labels, groups=None, fractions=DEFAULT_FRACTIONS, seed=42
     return train, val, test
 
 
+def stratified_kfold(labels, groups=None, n_splits=4, seed=42):
+    """Return ``n_splits`` ``(train_positions, val_positions)`` stratified by label.
+
+    Groups are kept intact: samples of one group always land in the same fold.
+    """
+    if n_splits < 2:
+        raise ValueError("n_splits must be >= 2")
+    if groups is None:
+        groups = list(range(len(labels)))
+
+    group_to_samples = defaultdict(list)
+    group_label = {}
+    for sample, (label, group) in enumerate(zip(labels, groups)):
+        group_to_samples[group].append(sample)
+        group_label[group] = label
+
+    class_to_groups = defaultdict(list)
+    for group, label in group_label.items():
+        class_to_groups[label].append(group)
+
+    rng = random.Random(seed)
+    folds = [[] for _ in range(n_splits)]
+    for label in sorted(class_to_groups):
+        class_groups = class_to_groups[label]
+        rng.shuffle(class_groups)
+        for index, group in enumerate(class_groups):
+            folds[index % n_splits].extend(group_to_samples[group])
+
+    all_positions = set(range(len(labels)))
+    result = []
+    for fold in folds:
+        val = sorted(fold)
+        train = sorted(all_positions - set(val))
+        result.append((train, val))
+    return result
+
+
 def build_split_indices(
     index,
     labels,
@@ -228,8 +265,19 @@ def build_datasets(
         )
     if verbose:
         print(
-            f"dedup: {removed} duplicate series removed "
-            f"({len(base.index)} -> {len(base.index) - removed})"
+            f"[data] root={root!r} splits={tuple(splits)!r} "
+            f"classes={base.classes}",
+            flush=True,
+        )
+        print(
+            f"[data] dedup: {removed} removed "
+            f"({len(base.index)} -> {len(base.index) - removed})",
+            flush=True,
+        )
+        print(
+            f"[data] split sizes: train={len(train_idx)} val={len(val_idx)} "
+            f"test={len(test_idx)}",
+            flush=True,
         )
 
     shared = dict(root=root, split=splits, **dataset_kwargs)

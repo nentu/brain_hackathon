@@ -18,6 +18,7 @@ from brain_hackathon.train.utils import build_datasets
 class TinyModel(nn.Module):
     def __init__(self, num_classes, channels=6):
         super().__init__()
+        self.dim = [num_classes]
         self.net = nn.Sequential(
             nn.Conv2d(channels, 4, 3, padding=1),
             nn.ReLU(),
@@ -177,6 +178,7 @@ def test_train_logs_config(aligned_root, tmp_path):
     assert logger.config["batch_size"] == 4
     assert logger.config["n_train"] == len(train_ds)
     assert logger.config["n_params"] > 0
+    assert logger.config["head_dims"] == [len(train_ds.dataset.classes)]
 
 
 def test_log_model_artifact_disabled(tmp_path):
