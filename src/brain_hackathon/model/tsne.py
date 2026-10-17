@@ -208,41 +208,97 @@ def parse_args(argv=None):
     )
     return parser.parse_args(argv)
 
+def compute_embedding(
+    root=DEFAULT_ROOT,
+    splits=("Train", "Test"),
+    limit=None,
+    perplexity=30.0,
+    batch_size=32,
+    seed=42,
+    weights=None,
+    device=None,
+):
+    """Embed the unaugmented dataset with t-SNE.
+
+    Returns ``(dataset, indices, embedding, labels)``.
+    """
+    dataset = AlignedMRIClassificationDataset(
+        root=root, split=tuple(splits), augment=None
+    )
+    if len(dataset) == 0:
+        raise ValueError(
+            f"no series found under root={root!r}; expected "
+            "<root>/<split>/<class>/<id>_<MODALITY>.jpg"
+        )
+    if len(dataset) < 2:
+        raise ValueError("need at least 2 series for t-SNE")
+
+    model = RadImageNetResNet50(
+        dim=len(dataset.classes), verbose=False, weights_path=weights
+    )
+    indices = select_indices(dataset, limit, seed)
+    features, labels = extract_features(model, dataset, indices, batch_size, device)
+
+    features = StandardScaler().fit_transform(features)
+    effective_perplexity = min(perplexity, max(2.0, (len(features) - 1) / 3.0))
+    embedding = TSNE(
+        n_components=2,
+        perplexity=effective_perplexity,
+        init="pca",
+        learning_rate="auto",
+        random_state=seed,
+    ).fit_transform(features)
+    return dataset, indices, embedding, labels
+
+
+def draw_embeddding(
+    root=DEFAULT_ROOT,
+    splits=("Train", "Test"),
+    limit=None,
+    perplexity=30.0,
+    batch_size=32,
+    seed=42,
+    weights=None,
+    device=None,
+):
+    """Return a ready-to-display Plotly figure of the t-SNE embedding.
+
+    In a notebook, ``draw_embeddding()`` as the last expression of a cell displays it.
+    """
+    dataset, indices, embedding, labels = compute_embedding(
+        root=root,
+        splits=splits,
+        limit=limit,
+        perplexity=perplexity,
+        batch_size=batch_size,
+        seed=seed,
+        weights=weights,
+        device=device,
+    )
+    return build_figure(dataset, indices, embedding, labels)
+
+
+# Correctly-spelled alias.
+draw_embedding = draw_embeddding
 
 def main(argv=None):
     args = parse_args(argv)
 
-    dataset = AlignedMRIClassificationDataset(
-        root=args.root, split=tuple(args.splits), augment=None
-    )
-    if len(dataset) == 0:
-        raise SystemExit(
-            f"no series found under root={args.root!r}; expected "
-            "<root>/<split>/<class>/<id>_<MODALITY>.jpg"
+    try:
+        dataset, indices, embedding, labels = compute_embedding(
+            root=args.root,
+            splits=args.splits,
+            limit=args.limit,
+            perplexity=args.perplexity,
+            batch_size=args.batch_size,
+            seed=args.seed,
+            weights=args.weights,
+            device=args.device,
         )
-    if len(dataset) < 2:
-        raise SystemExit("need at least 2 series for t-SNE")
+    except ValueError as exc:
+        raise SystemExit(str(exc))
 
-    model = RadImageNetResNet50(
-        dim=len(dataset.classes), verbose=False, weights_path=args.weights
-    )
-
-    indices = select_indices(dataset, args.limit, args.seed)
-    features, labels = extract_features(
-        model, dataset, indices, args.batch_size, args.device
-    )
-    print(f"features: {features.shape} for {len(indices)} series")
-
-    features = StandardScaler().fit_transform(features)
-    perplexity = min(args.perplexity, max(2.0, (len(features) - 1) / 3.0))
-    tsne = TSNE(
-        n_components=2,
-        perplexity=perplexity,
-        init="pca",
-        learning_rate="auto",
-        random_state=args.seed,
-    )
-    embedding = tsne.fit_transform(features)
+    print(f"embedded {len(indices)} series")
 
     if args.dash:
         run_dash(
