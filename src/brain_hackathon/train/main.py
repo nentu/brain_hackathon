@@ -16,7 +16,6 @@ from brain_hackathon.train.metrics import METRIC_NAMES, Metrics
 BEST_OPTIMIZER = "adamw"
 BEST_LR = 1e-3
 BEST_WEIGHT_DECAY = 0
-BEST_FREEZE_FIRST_N = 2
 
 __all__ = [
     "METRIC_NAMES",
@@ -319,17 +318,10 @@ def parse_args(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--checkpoint-dir", default="checkpoints")
     parser.add_argument(
-        "--freeze-all",
-        action="store_true",
+        "--freeze",
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="freeze every layer except the first --first-n backbone layers and the head",
-    )
-    parser.add_argument(
-        "--first-n",
-        type=int,
-        default=2,
-        dest="first_n",
-        help="number of first backbone layers to keep trainable with --freeze-all",
+        help="freeze the whole pretrained backbone (train only the head)",
     )
     parser.add_argument("--wandb-project", default="brain-hackathon")
     parser.add_argument("--wandb-mode", default=None)
@@ -345,8 +337,8 @@ def main(argv=None):
 
     train_ds, val_ds, test_ds = build_datasets(root=args.root)
     model = RadImageNetResNet50(
-        dim=len(train_ds.dataset.classes),
-        unfreeze_first_n=args.first_n if args.freeze_all else BEST_FREEZE_FIRST_N,
+        dim=[len(train_ds.dataset.classes)],
+        freeze_backbone=args.freeze,
         weights_path=args.weights,
     )
     logger = Logger(

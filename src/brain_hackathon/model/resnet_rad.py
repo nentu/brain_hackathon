@@ -21,8 +21,10 @@ class RadImageNetResNet50(nn.Module):
     classifier.
 
     The pretrained first convolution (3 input channels) is expanded to ``in_channels``
-    by duplicating its weights, and a Xavier-initialised ``nn.Linear`` head with ``dim``
-    outputs is appended.
+    by duplicating its weights. A head is appended after the pooled features: ``dim`` is
+    a list of layer widths, producing ``Linear -> ReLU`` blocks and a final
+    ``Linear(feature_dim -> dim[-1])`` with no trailing ReLU. All head linears are
+    Xavier-initialised.
     """
 
     repo_id = "Lab-Rasool/RadImageNet"
@@ -31,17 +33,21 @@ class RadImageNetResNet50(nn.Module):
 
     def __init__(
         self,
-        dim=4,
+        dim=(4,),
         in_channels=6,
         device=None,
         verbose=True,
-        unfreeze_first_n=None,
+        freeze_backbone=False,
         weights_path=None,
         cache_dir=None,
         local_files_only=False,
     ):
         super().__init__()
-        self.dim = dim
+        if isinstance(dim, int):
+            dim = [dim]
+        self.dim = [int(width) for width in dim]
+        if not self.dim or any(width <= 0 for width in self.dim):
+            raise ValueError("dim must be a non-empty list of positive layer sizes")
         self.in_channels = in_channels
         self.input_size = (in_channels, 224, 224)
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,16 +60,29 @@ class RadImageNetResNet50(nn.Module):
         self._expand_first_conv(in_channels)
 
         self.pool = nn.AdaptiveAvgPool2d(1)
-        self.head = nn.Linear(self.feature_dim, dim)
-        nn.init.xavier_uniform_(self.head.weight)
-        nn.init.zeros_(self.head.bias)
+        self.head = self._build_head(self.dim)
 
-        if unfreeze_first_n is not None:
-            self.freeze_all_except(unfreeze_first_n)
+        if freeze_backbone:
+            self.freeze_all_except(0)
 
         self.to(self.device).eval()
         if verbose:
             self.print_input_shape()
+
+    def _build_head(self, widths):
+        layers = []
+        in_features = self.feature_dim
+        for i, out_features in enumerate(widths):
+            layers.append(nn.Linear(in_features, out_features))
+            if i < len(widths) - 1:
+                layers.append(nn.ReLU())
+            in_features = out_features
+
+        for module in layers:
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                nn.init.zeros_(module.bias)
+        return nn.Sequential(*layers)
 
     def freeze_all_except(self, first_n=0):
         """Freeze all parameters except the first ``first_n`` backbone layers and the head.

@@ -234,7 +234,7 @@ def compute_embedding(
         raise ValueError("need at least 2 series for t-SNE")
 
     model = RadImageNetResNet50(
-        dim=len(dataset.classes), verbose=False, weights_path=weights
+        dim=[len(dataset.classes)], verbose=False, weights_path=weights
     )
     indices = select_indices(dataset, limit, seed)
     features, labels = extract_features(model, dataset, indices, batch_size, device)

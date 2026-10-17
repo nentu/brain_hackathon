@@ -27,14 +27,19 @@ def test_forward_output_shape(model):
     x = torch.zeros(1, *model.input_size, device=model.device)
     with torch.no_grad():
         output = model(x)
-    assert output.shape == (1, model.dim)
+    assert output.shape == (1, model.dim[-1])
 
 
-def test_custom_dim():
+def test_custom_dim_list_builds_mlp_head():
     try:
-        model = RadImageNetResNet50(dim=7, verbose=False)
+        model = RadImageNetResNet50(dim=[16, 7], verbose=False)
     except Exception as exc:
         pytest.skip(f"RadImageNet weights unavailable: {exc}")
+
+    linears = [m for m in model.head if isinstance(m, torch.nn.Linear)]
+    assert [layer.out_features for layer in linears] == [16, 7]
+    assert isinstance(model.head[1], torch.nn.ReLU)
+
     x = torch.zeros(1, *model.input_size, device=model.device)
     with torch.no_grad():
         assert model(x).shape == (1, 7)
@@ -78,19 +83,22 @@ def test_freeze_all_except_zero_only_head():
     )
 
 
-def test_unfreeze_first_n_flag():
-    model = _new_model(unfreeze_first_n=3)
-    trainable = {name for name, p in model.named_parameters() if p.requires_grad}
+def test_freeze_backbone_flag():
+    frozen = _new_model(freeze_backbone=True)
+    assert all(p.requires_grad for p in frozen.head.parameters())
+    assert not any(p.requires_grad for p in frozen.backbone.parameters())
 
-    assert any(name.startswith("head.") for name in trainable)
-    assert "backbone.0.weight" in trainable
-    assert "backbone.1.weight" in trainable
-    assert "backbone.4.0.conv1.weight" not in trainable
+    trainable = _new_model(freeze_backbone=False)
+    assert all(p.requires_grad for p in trainable.backbone.parameters())
+    assert all(p.requires_grad for p in trainable.head.parameters())
 
 
 def test_head_is_xavier_initialised(model):
-    weight = model.head.weight.detach().cpu()
-    bound = math.sqrt(6.0 / (weight.shape[0] + weight.shape[1]))
-    assert weight.abs().max().item() <= bound * 1.001
-    assert weight.abs().sum().item() > 0.0
-    assert torch.count_nonzero(model.head.bias) == 0
+    linears = [m for m in model.head if isinstance(m, torch.nn.Linear)]
+    assert linears
+    for linear in linears:
+        weight = linear.weight.detach().cpu()
+        bound = math.sqrt(6.0 / (weight.shape[0] + weight.shape[1]))
+        assert weight.abs().max().item() <= bound * 1.001
+        assert weight.abs().sum().item() > 0.0
+        assert torch.count_nonzero(linear.bias) == 0
