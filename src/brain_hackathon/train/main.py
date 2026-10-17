@@ -15,7 +15,7 @@ from brain_hackathon.train.metrics import METRIC_NAMES, Metrics
 # adamw, lr=1e-3, weight_decay=0, no freezing (all layers trainable).
 BEST_OPTIMIZER = "adamw"
 BEST_LR = 1e-3
-BEST_WEIGHT_DECAY = 0
+BEST_WEIGHT_DECAY = 1e-4
 
 __all__ = [
     "METRIC_NAMES",
@@ -191,6 +191,7 @@ def train(
                 "seed": seed,
                 "device": str(device),
                 "num_classes": num_classes,
+                "head_dims": list(getattr(model, "dim", [])),
                 "n_train": len(train_dataset),
                 "n_val": len(val_dataset),
                 "n_test": len(test_dataset) if test_dataset is not None else 0,
