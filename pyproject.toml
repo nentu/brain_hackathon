@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "albumentations>=2.0.8",
+    "dash>=2.16",
     "huggingface-hub>=0.23",
     "matplotlib>=3.5",
     "opencv-python>=4.5",
