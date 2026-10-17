@@ -4,7 +4,11 @@ Uses the pretrained backbone only: the classifier head added for fine-tuning is
 bypassed (``forward_features``), so no newly-initialised/trained head weights are used.
 
 Run directly, e.g.:
-    uv run python src/brain_hackathon/model/tsne.py --root data/aligned --dash
+    # 6-channel aligned dataset + 6-channel model
+    uv run python src/brain_hackathon/model/tsne.py --dataset aligned --dash
+
+    # single-channel raw dataset + 1-channel model
+    uv run python src/brain_hackathon/model/tsne.py --dataset raw --dash
 """
 
 import argparse
@@ -25,7 +29,48 @@ from brain_hackathon.data.dataset import (
     MODALITIES,
     AlignedMRIClassificationDataset,
 )
-from brain_hackathon.model.resnet_rad import RadImageNetResNet50
+from brain_hackathon.data.raw_dataset import RAW_ROOT as DEFAULT_RAW_ROOT
+from brain_hackathon.data.raw_dataset import RawImageDataset
+from brain_hackathon.model.resnet_rad import (
+    RadImageNetResNet50,
+    RadImageNetResNet50Single,
+)
+
+DATASET_KINDS = ("aligned", "raw")
+
+
+def resolve_root(kind, root):
+    if root is not None:
+        return root
+    return DEFAULT_RAW_ROOT if kind == "raw" else DEFAULT_ROOT
+
+
+def make_dataset(kind, root, splits):
+    if kind == "raw":
+        return RawImageDataset(root=root, split=tuple(splits), normalize=True)
+    return AlignedMRIClassificationDataset(
+        root=root, split=tuple(splits), augment=None
+    )
+
+
+def make_model(kind, num_classes, weights=None):
+    model_class = (
+        RadImageNetResNet50Single if kind == "raw" else RadImageNetResNet50
+    )
+    return model_class(dim=[num_classes], verbose=False, weights_path=weights)
+
+
+def item_files(kind, dataset, index):
+    if kind == "raw":
+        return [os.path.basename(dataset.index[index][0])]
+    return series_files(dataset, index)
+
+
+def item_id(kind, dataset, index):
+    if kind == "raw":
+        path = dataset.index[index][0]
+        return os.path.splitext(os.path.basename(path))[0]
+    return dataset.index[index][0]
 
 
 def select_indices(dataset, limit=None, seed=42):
@@ -61,14 +106,14 @@ def series_files(dataset, index):
     return sorted(os.path.basename(path) for path in modalities.values())
 
 
-def build_figure(dataset, indices, embedding, labels):
-    files = [series_files(dataset, i) for i in indices]
+def build_figure(kind, dataset, indices, embedding, labels):
+    files = [item_files(kind, dataset, i) for i in indices]
     frame = pd.DataFrame(
         {
             "x": embedding[:, 0],
             "y": embedding[:, 1],
             "label": [dataset.classes[int(label)] for label in labels],
-            "series_id": [dataset.index[i][0] for i in indices],
+            "series_id": [item_id(kind, dataset, i) for i in indices],
             "file": [names[0] if names else "" for names in files],
             "files": ["<br>".join(names) for names in files],
             "index": list(indices),
@@ -86,8 +131,20 @@ def build_figure(dataset, indices, embedding, labels):
     )
 
 
-def montage_data_uri(dataset, index, tile=72, pad=2):
-    """Base64 JPEG data URI of a 2x3 montage of the series' modalities."""
+def montage_data_uri(kind, dataset, index, tile=72, pad=2):
+    """Base64 JPEG data URI: full image (raw) or 2x3 modality montage (aligned)."""
+    if kind == "raw":
+        image = cv2.imread(dataset.index[index][0], cv2.IMREAD_GRAYSCALE)
+        if image is None:
+            return ""
+        image = cv2.resize(image, (240, 240), interpolation=cv2.INTER_AREA)
+        ok, buffer = cv2.imencode(
+            ".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), 85]
+        )
+        if not ok:
+            return ""
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.tobytes()).decode()
+
     paths = dataset.index[index][2]
     rows, cols = 2, 3
     canvas = np.zeros(
@@ -122,11 +179,13 @@ def montage_data_uri(dataset, index, tile=72, pad=2):
     return "data:image/jpeg;base64," + base64.b64encode(buffer.tobytes()).decode()
 
 
-def run_dash(dataset, indices, embedding, labels, port=8050, jupyter_mode=None):
-    """Interactive Dash viewer: hover a point to see the series' modality images."""
+def run_dash(
+    kind, dataset, indices, embedding, labels, port=8050, jupyter_mode=None
+):
+    """Interactive Dash viewer: hover a point to see the image(s)."""
     from dash import Dash, Input, Output, dcc, html, no_update
 
-    figure = build_figure(dataset, indices, embedding, labels)
+    figure = build_figure(kind, dataset, indices, embedding, labels)
     lookup = {int(index): int(label) for index, label in zip(indices, labels)}
 
     app = Dash(__name__)
@@ -155,7 +214,7 @@ def run_dash(dataset, indices, embedding, labels, port=8050, jupyter_mode=None):
         index = int(index)
 
         label = dataset.classes[lookup[index]]
-        files = series_files(dataset, index)
+        files = item_files(kind, dataset, index)
         children = [
             html.Div(
                 [
@@ -165,7 +224,7 @@ def run_dash(dataset, indices, embedding, labels, port=8050, jupyter_mode=None):
                 ]
             ),
             html.Img(
-                src=montage_data_uri(dataset, index),
+                src=montage_data_uri(kind, dataset, index),
                 style={"width": "240px", "border": "1px solid #ccc"},
             ),
         ]
@@ -181,7 +240,19 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="t-SNE of RadImageNet features colored by class."
     )
-    parser.add_argument("--root", default=DEFAULT_ROOT, help="aligned dataset root")
+    parser.add_argument(
+        "--dataset",
+        choices=DATASET_KINDS,
+        default="aligned",
+        help="aligned: 6-channel aligned dataset + 6-channel model; "
+        "raw: single-channel raw dataset + 1-channel model",
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="dataset root (default: data/aligned for 'aligned', "
+        "the raw dataset root for 'raw')",
+    )
     parser.add_argument(
         "--splits", nargs="+", default=["Train", "Test"], help="splits to include"
     )
@@ -209,7 +280,8 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 def compute_embedding(
-    root=DEFAULT_ROOT,
+    kind="aligned",
+    root=None,
     splits=("Train", "Test"),
     limit=None,
     perplexity=30.0,
@@ -218,24 +290,20 @@ def compute_embedding(
     weights=None,
     device=None,
 ):
-    """Embed the unaugmented dataset with t-SNE.
+    """Embed the dataset with t-SNE.
 
+    ``kind="aligned"`` uses the 6-channel aligned dataset + ``RadImageNetResNet50``;
+    ``kind="raw"`` uses the single-channel raw dataset + ``RadImageNetResNet50Single``.
     Returns ``(dataset, indices, embedding, labels)``.
     """
-    dataset = AlignedMRIClassificationDataset(
-        root=root, split=tuple(splits), augment=None
-    )
+    root = resolve_root(kind, root)
+    dataset = make_dataset(kind, root, splits)
     if len(dataset) == 0:
-        raise ValueError(
-            f"no series found under root={root!r}; expected "
-            "<root>/<split>/<class>/<id>_<MODALITY>.jpg"
-        )
+        raise ValueError(f"no images found for kind={kind!r} under root={root!r}")
     if len(dataset) < 2:
-        raise ValueError("need at least 2 series for t-SNE")
+        raise ValueError("need at least 2 images for t-SNE")
 
-    model = RadImageNetResNet50(
-        dim=[len(dataset.classes)], verbose=False, weights_path=weights
-    )
+    model = make_model(kind, len(dataset.classes), weights)
     indices = select_indices(dataset, limit, seed)
     features, labels = extract_features(model, dataset, indices, batch_size, device)
 
@@ -252,7 +320,8 @@ def compute_embedding(
 
 
 def draw_embeddding(
-    root=DEFAULT_ROOT,
+    kind="aligned",
+    root=None,
     splits=("Train", "Test"),
     limit=None,
     perplexity=30.0,
@@ -263,9 +332,11 @@ def draw_embeddding(
 ):
     """Return a ready-to-display Plotly figure of the t-SNE embedding.
 
+    ``kind="aligned"`` (6-channel) or ``kind="raw"`` (single-channel).
     In a notebook, ``draw_embeddding()`` as the last expression of a cell displays it.
     """
     dataset, indices, embedding, labels = compute_embedding(
+        kind=kind,
         root=root,
         splits=splits,
         limit=limit,
@@ -275,7 +346,7 @@ def draw_embeddding(
         weights=weights,
         device=device,
     )
-    return build_figure(dataset, indices, embedding, labels)
+    return build_figure(kind, dataset, indices, embedding, labels)
 
 
 # Correctly-spelled alias.
@@ -286,6 +357,7 @@ def main(argv=None):
 
     try:
         dataset, indices, embedding, labels = compute_embedding(
+            kind=args.dataset,
             root=args.root,
             splits=args.splits,
             limit=args.limit,
@@ -302,6 +374,7 @@ def main(argv=None):
 
     if args.dash:
         run_dash(
+            args.dataset,
             dataset,
             indices,
             embedding,
@@ -311,7 +384,7 @@ def main(argv=None):
         )
         return embedding
 
-    figure = build_figure(dataset, indices, embedding, labels)
+    figure = build_figure(args.dataset, dataset, indices, embedding, labels)
     if args.output:
         figure.write_html(args.output)
         print(f"saved {args.output}")

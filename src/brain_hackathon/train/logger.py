@@ -27,7 +27,7 @@ class Logger:
 
     def __init__(
         self,
-        project="brain-hackathon",
+        project="brain-hackathon_raw",
         run_name=None,
         config=None,
         mode=None,
