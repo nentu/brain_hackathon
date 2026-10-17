@@ -38,6 +38,7 @@ def train(
     min_delta=0.0,
     loss_period=50,
     log_every=5,
+    initial_eval=True,
     device=None,
     logger=None,
     num_workers=0,
@@ -100,6 +101,8 @@ def train(
                 "patience": patience,
                 "min_delta": min_delta,
                 "loss_period": loss_period,
+                "log_every": log_every,
+                "initial_eval": initial_eval,
                 "seed": seed,
                 "device": str(device),
                 "num_classes": num_classes,
@@ -113,6 +116,45 @@ def train(
                 ),
             }
         )
+
+    if initial_eval:
+        train_loss0, train_metrics0 = evaluate(
+            model, train_loader, criterion, device, num_classes
+        )
+        val_loss0, val_metrics0 = evaluate(
+            model, val_loader, criterion, device, num_classes
+        )
+        message = (
+            f"[epoch   0] loss train={train_loss0:.4f} val={val_loss0:.4f}"
+        )
+        message += (
+            f" | train acc={train_metrics0['acc']:.4f} "
+            f"f1={train_metrics0['f1']:.4f}"
+        )
+        message += (
+            f" | val acc={val_metrics0['acc']:.4f} "
+            f"f1={val_metrics0['f1']:.4f}"
+        )
+
+        record0 = {
+            "loss/train": train_loss0,
+            **{f"{k}/train": v for k, v in train_metrics0.items()},
+            "loss/val": val_loss0,
+            **{f"{k}/val": v for k, v in val_metrics0.items()},
+        }
+        if test_loader is not None:
+            test_loss0, test_metrics0 = evaluate(
+                model, test_loader, criterion, device, num_classes
+            )
+            message += f" | test loss={test_loss0:.4f}"
+            record0["loss/test"] = test_loss0
+            record0.update(
+                {f"{k}/test": v for k, v in test_metrics0.items()}
+            )
+        print(message, flush=True)
+
+        if logger is not None:
+            logger.log(record0, step=0)
 
     early = EarlyStopping(patience=patience, min_delta=min_delta)
 
