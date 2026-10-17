@@ -1,0 +1,107 @@
+_wandb:
+    value:
+        cli_version: 0.30.0
+        e:
+            shjo330ss02uejxyqk22oorc9donkv95:
+                args:
+                    - --epoch
+                    - "200"
+                codePath: .venv/bin/cross_validate
+                codePathLocal: .venv/bin/cross_validate
+                cpu_count: 14
+                cpu_count_logical: 20
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "1006450962432"
+                        used: "945659822080"
+                executable: /home/artem/Documents/brain_hackaton/.venv/bin/python3
+                git:
+                    commit: 2fd87e8681cfeff0025949ecc4df68e0e2c3acef
+                    remote: https://github.com/nentu/brain_hackathon.git
+                gpu: NVIDIA GeForce RTX 4070 Laptop GPU
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 4608
+                      memoryTotal: "8585740288"
+                      name: NVIDIA GeForce RTX 4070 Laptop GPU
+                      uuid: GPU-d306e092-8d35-b336-54db-2eaf20d0bdf1
+                host: artem-Pulse
+                memory:
+                    total: "33340641280"
+                os: Linux-6.8.0-138-generic-x86_64-with-glibc2.35
+                program: /home/artem/Documents/brain_hackaton/.venv/bin/cross_validate
+                python: CPython 3.14.3
+                root: /home/artem/Documents/brain_hackaton
+                startedAt: "2026-10-17T18:56:57.976873Z"
+                writerId: shjo330ss02uejxyqk22oorc9donkv95
+        m: []
+        python_version: 3.14.3
+        t:
+            "1":
+                - 1
+                - 41
+                - 49
+                - 80
+            "2":
+                - 1
+                - 41
+                - 49
+                - 80
+            "3":
+                - 2
+                - 3
+                - 13
+                - 16
+                - 61
+                - 62
+            "4": 3.14.3
+            "5": 0.30.0
+            "12": 0.30.0
+            "13": linux-x86_64
+batch_size:
+    value: 32
+device:
+    value: cuda
+epochs:
+    value: 200
+freeze_backbone:
+    value: true
+git_hash:
+    value: 2fd87e8
+head_dims:
+    value:
+        - 4
+loss_period:
+    value: 1000000000
+lr:
+    value: 0.002
+min_delta:
+    value: 0
+n_params:
+    value: 23525636
+n_splits:
+    value: 4
+n_test:
+    value: 120
+n_train:
+    value: 480
+n_trainable:
+    value: 8196
+n_val:
+    value: 120
+num_classes:
+    value: 4
+optimizer:
+    value: adamw
+patience:
+    value: 200
+seed:
+    value: 42
+stage:
+    value: final_full_train
+train_frac:
+    value: 0.8
+weight_decay:
+    value: 0.0001

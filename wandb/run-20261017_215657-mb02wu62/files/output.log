@@ -1,0 +1,47 @@
+[model] loading pretrained weights from /home/artem/Documents/brain_hackaton/checkpoints/models--Lab-Rasool--RadImageNet/snapshots/14460ee4c1276f6925611a63aa9a54a05d39eae0/ResNet50.pt
+[model] backbone loaded: 318 tensors
+[train] device=cuda epochs=200 batch_size=32 optimizer=adamw lr=0.002
+[epoch   1] loss train=1.4515 val=1.2745 test=1.2745 | val acc=0.4000 f1=0.1693 | test acc=0.4000 f1=0.1693
+[34m[1mwandb[0m: [33mWARNING[0m Symlinked 1 file into the W&B run directory; call wandb.save again to sync new files.
+[epoch   5] loss train=0.9516 val=0.8602 test=0.8602 | val acc=0.7250 f1=0.6922 | test acc=0.7250 f1=0.6922
+[epoch  10] loss train=0.8448 val=0.7868 test=0.7868 | val acc=0.6583 f1=0.5688 | test acc=0.6583 f1=0.5688
+[epoch  15] loss train=0.8220 val=0.7440 test=0.7440 | val acc=0.7000 f1=0.6675 | test acc=0.7000 f1=0.6675
+[epoch  20] loss train=0.7786 val=0.6573 test=0.6573 | val acc=0.8250 f1=0.8079 | test acc=0.8250 f1=0.8079
+[epoch  25] loss train=0.7949 val=0.6380 test=0.6380 | val acc=0.8000 f1=0.7908 | test acc=0.8000 f1=0.7908
+[epoch  30] loss train=0.7627 val=0.6053 test=0.6053 | val acc=0.8333 f1=0.8228 | test acc=0.8333 f1=0.8228
+[epoch  35] loss train=0.7631 val=0.5961 test=0.5961 | val acc=0.8167 f1=0.8058 | test acc=0.8167 f1=0.8058
+[epoch  40] loss train=0.7419 val=0.5645 test=0.5645 | val acc=0.8750 f1=0.8679 | test acc=0.8750 f1=0.8679
+[epoch  45] loss train=0.7404 val=0.5740 test=0.5740 | val acc=0.8417 f1=0.8356 | test acc=0.8417 f1=0.8356
+[epoch  50] loss train=0.7303 val=0.6897 test=0.6897 | val acc=0.6750 f1=0.6267 | test acc=0.6750 f1=0.6267
+[epoch  55] loss train=0.6361 val=0.5286 test=0.5286 | val acc=0.8667 f1=0.8595 | test acc=0.8667 f1=0.8595
+[epoch  60] loss train=0.6887 val=0.5232 test=0.5232 | val acc=0.8667 f1=0.8553 | test acc=0.8667 f1=0.8553
+[epoch  65] loss train=0.6574 val=0.5633 test=0.5633 | val acc=0.8417 f1=0.8295 | test acc=0.8417 f1=0.8295
+[epoch  70] loss train=0.6132 val=0.5267 test=0.5267 | val acc=0.8583 f1=0.8504 | test acc=0.8583 f1=0.8504
+[epoch  75] loss train=0.5901 val=0.5247 test=0.5247 | val acc=0.8583 f1=0.8474 | test acc=0.8583 f1=0.8474
+[epoch  80] loss train=0.6506 val=0.6002 test=0.6002 | val acc=0.8000 f1=0.7934 | test acc=0.8000 f1=0.7934
+[epoch  85] loss train=0.5968 val=0.5407 test=0.5407 | val acc=0.8417 f1=0.8298 | test acc=0.8417 f1=0.8298
+[epoch  90] loss train=0.6656 val=0.7646 test=0.7646 | val acc=0.6833 f1=0.6166 | test acc=0.6833 f1=0.6166
+[epoch  95] loss train=0.5957 val=0.5659 test=0.5659 | val acc=0.8250 f1=0.8184 | test acc=0.8250 f1=0.8184
+[epoch 100] loss train=0.5593 val=0.5109 test=0.5109 | val acc=0.8583 f1=0.8434 | test acc=0.8583 f1=0.8434
+[epoch 105] loss train=0.6272 val=0.5661 test=0.5661 | val acc=0.8333 f1=0.8154 | test acc=0.8333 f1=0.8154
+[epoch 110] loss train=0.6670 val=0.5109 test=0.5109 | val acc=0.8667 f1=0.8570 | test acc=0.8667 f1=0.8570
+[epoch 115] loss train=0.5372 val=0.4880 test=0.4880 | val acc=0.8500 f1=0.8366 | test acc=0.8500 f1=0.8366
+[epoch 120] loss train=0.5600 val=0.5119 test=0.5119 | val acc=0.8583 f1=0.8400 | test acc=0.8583 f1=0.8400
+[epoch 125] loss train=0.5742 val=0.5301 test=0.5301 | val acc=0.8417 f1=0.8332 | test acc=0.8417 f1=0.8332
+[epoch 130] loss train=0.5216 val=0.4860 test=0.4860 | val acc=0.8667 f1=0.8603 | test acc=0.8667 f1=0.8603
+[epoch 135] loss train=0.6268 val=0.5682 test=0.5682 | val acc=0.8083 f1=0.7857 | test acc=0.8083 f1=0.7857
+[epoch 140] loss train=0.5185 val=0.5341 test=0.5341 | val acc=0.8583 f1=0.8522 | test acc=0.8583 f1=0.8522
+[epoch 145] loss train=0.5010 val=0.4955 test=0.4955 | val acc=0.8667 f1=0.8569 | test acc=0.8667 f1=0.8569
+[epoch 150] loss train=0.5061 val=0.4823 test=0.4823 | val acc=0.8667 f1=0.8569 | test acc=0.8667 f1=0.8569
+[epoch 155] loss train=0.5516 val=0.5945 test=0.5945 | val acc=0.7917 f1=0.7563 | test acc=0.7917 f1=0.7563
+[epoch 160] loss train=0.5447 val=0.4852 test=0.4852 | val acc=0.8667 f1=0.8584 | test acc=0.8667 f1=0.8584
+[epoch 165] loss train=0.5417 val=0.4828 test=0.4828 | val acc=0.8667 f1=0.8592 | test acc=0.8667 f1=0.8592
+[epoch 170] loss train=0.5069 val=0.4880 test=0.4880 | val acc=0.8667 f1=0.8548 | test acc=0.8667 f1=0.8548
+[epoch 175] loss train=0.5283 val=0.5560 test=0.5560 | val acc=0.7917 f1=0.7676 | test acc=0.7917 f1=0.7676
+[epoch 180] loss train=0.5598 val=0.4821 test=0.4821 | val acc=0.8667 f1=0.8604 | test acc=0.8667 f1=0.8604
+[epoch 185] loss train=0.5923 val=0.4704 test=0.4704 | val acc=0.8750 f1=0.8676 | test acc=0.8750 f1=0.8676
+[epoch 190] loss train=0.4852 val=0.5190 test=0.5190 | val acc=0.8500 f1=0.8401 | test acc=0.8500 f1=0.8401
+[epoch 195] loss train=0.5125 val=0.4778 test=0.4778 | val acc=0.8833 f1=0.8724 | test acc=0.8833 f1=0.8724
+[epoch 200] loss train=0.4866 val=0.4876 test=0.4876 | val acc=0.8667 f1=0.8554 | test acc=0.8667 f1=0.8554
+[34m[1mwandb[0m: [33mWARNING[0m Symlinked 1 file into the W&B run directory; call wandb.save again to sync new files.
+[34m[1mwandb[0m: [33mWARNING[0m Artifact "model-mb02wu62-best" already exists with the same content. No new version will be created.

@@ -1,6 +1,6 @@
 """K-fold cross-validation on an 80% train split + final full-train/test run.
 
-    uv run cross_validate --root data/aligned --epochs 30 --n-splits 4
+uv run cross_validate --root data/aligned --epochs 30 --n-splits 4
 """
 
 import argparse
@@ -66,9 +66,7 @@ def run_cross_validation(
 
     Returns ``{"folds": [...], "mean": {...}, "final": {...}, "sizes": {...}}``.
     """
-    base = AlignedMRIClassificationDataset(
-        root=root, split=ALL_SPLITS, augment=None
-    )
+    base = AlignedMRIClassificationDataset(root=root, split=ALL_SPLITS, augment=None)
     if len(base) < 3:
         raise ValueError(f"not enough series under root={root!r}")
 
@@ -84,9 +82,7 @@ def run_cross_validation(
 
     train_labels = [labels[p] for p in train_pos]
     train_groups = [kept_groups[p] for p in train_pos]
-    folds = stratified_kfold(
-        train_labels, train_groups, n_splits=n_splits, seed=seed
-    )
+    folds = stratified_kfold(train_labels, train_groups, n_splits=n_splits, seed=seed)
 
     if verbose:
         print(
@@ -101,8 +97,7 @@ def run_cross_validation(
             flush=True,
         )
         print(
-            f"[cv] {n_splits}-fold val sizes="
-            f"{[len(val) for _, val in folds]}",
+            f"[cv] {n_splits}-fold val sizes={[len(val) for _, val in folds]}",
             flush=True,
         )
 
@@ -166,9 +161,7 @@ def run_cross_validation(
     if verbose:
         print(
             "CV mean±std: "
-            + " ".join(
-                f"{key}={mu:.4f}±{sd:.4f}" for key, (mu, sd) in summary.items()
-            )
+            + " ".join(f"{key}={mu:.4f}±{sd:.4f}" for key, (mu, sd) in summary.items())
         )
 
     final_checkpoint_dir = os.path.join(checkpoint_dir, "final")
@@ -244,15 +237,14 @@ def parse_args(argv=None):
         help="freeze the pretrained backbone (train only the head)",
     )
     parser.add_argument("--device", default=None)
-    parser.add_argument(
-        "--checkpoint-dir", default=os.path.join("checkpoints", "cv")
-    )
+    parser.add_argument("--checkpoint-dir", default=os.path.join("checkpoints", "cv"))
     parser.add_argument("--wandb-project", default="brain-hackathon")
     parser.add_argument("--wandb-mode", default=None)
     parser.add_argument("--run-name", default=None)
     parser.add_argument(
         "--no-wandb",
         action="store_true",
+        default=False,
         help="disable W&B logging for the final full-train run",
     )
     return parser.parse_args(argv)
