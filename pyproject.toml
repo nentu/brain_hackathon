@@ -43,6 +43,7 @@ train_model = "brain_hackathon.train.main:main"
 search_hparams = "brain_hackathon.train.search:main"
 report_hparams = "brain_hackathon.train.report:main"
 fetch_model = "brain_hackathon.train.fetch_model:main"
+cross_validate = "brain_hackathon.train.cross_validate:main"
 train = "brain_hackathon.train.main:main"
 t-sne = "brain_hackathon.model.tsne:main"
 

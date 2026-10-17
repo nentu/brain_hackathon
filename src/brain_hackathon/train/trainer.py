@@ -18,7 +18,7 @@ from brain_hackathon.train.engine import (
 from brain_hackathon.train.metrics import Metrics
 
 # Defaults from the hyperparameter search (best val_loss/F1).
-BEST_OPTIMIZER = "adam"
+BEST_OPTIMIZER = "adamw"
 BEST_LR = 2e-3
 BEST_WEIGHT_DECAY = 1e-4
 
