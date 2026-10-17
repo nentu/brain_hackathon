@@ -7,7 +7,10 @@ pytest.importorskip("torchvision")
 
 from huggingface_hub import hf_hub_download
 
-from brain_hackathon.model.resnet_rad import RadImageNetResNet50
+from brain_hackathon.model.resnet_rad import (
+    RadImageNetResNet50,
+    RadImageNetResNet50Single,
+)
 
 
 @pytest.fixture(scope="module")
@@ -91,6 +94,27 @@ def test_freeze_backbone_flag():
     trainable = _new_model(freeze_backbone=False)
     assert all(p.requires_grad for p in trainable.backbone.parameters())
     assert all(p.requires_grad for p in trainable.head.parameters())
+
+
+def test_single_channel_model():
+    try:
+        model = RadImageNetResNet50Single(dim=[4], verbose=False)
+    except Exception as exc:
+        pytest.skip(f"RadImageNet weights unavailable: {exc}")
+
+    assert model.input_size == (1, 224, 224)
+    conv = model.backbone[0]
+    assert conv.in_channels == 1
+    assert tuple(conv.weight.shape) == (64, 1, 7, 7)
+
+    path = hf_hub_download(repo_id=model.repo_id, filename=model.filename)
+    state_dict = torch.load(path, map_location="cpu", weights_only=True)
+    expected = state_dict["backbone.0.weight"].mean(dim=1, keepdim=True)
+    assert torch.allclose(conv.weight.detach().cpu(), expected)
+
+    x = torch.zeros(1, 1, 224, 224, device=model.device)
+    with torch.no_grad():
+        assert model(x).shape == (1, 4)
 
 
 def test_head_is_xavier_initialised(model):

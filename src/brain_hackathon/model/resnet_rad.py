@@ -134,13 +134,19 @@ class RadImageNetResNet50(nn.Module):
         conv = self.backbone[0]
         if in_channels == conv.in_channels:
             return
-        if in_channels % conv.in_channels != 0:
+
+        if in_channels == 1:
+            # Average the pretrained RGB filters into one grayscale input channel.
+            weight = conv.weight.detach().mean(dim=1, keepdim=True)
+        elif in_channels % conv.in_channels == 0:
+            repeats = in_channels // conv.in_channels
+            weight = torch.cat([conv.weight.detach()] * repeats, dim=1)
+        else:
             raise ValueError(
-                f"in_channels={in_channels} is not a multiple of the pretrained "
-                f"{conv.in_channels} channels"
+                f"in_channels={in_channels} is not supported by the pretrained "
+                f"{conv.in_channels}-channel convolution"
             )
 
-        repeats = in_channels // conv.in_channels
         expanded = nn.Conv2d(
             in_channels,
             conv.out_channels,
@@ -152,7 +158,7 @@ class RadImageNetResNet50(nn.Module):
             dtype=conv.weight.dtype,
         )
         with torch.no_grad():
-            expanded.weight.copy_(torch.cat([conv.weight.detach()] * repeats, dim=1))
+            expanded.weight.copy_(weight)
             if conv.bias is not None:
                 expanded.bias.copy_(conv.bias.detach())
         self.backbone[0] = expanded
@@ -175,5 +181,33 @@ class RadImageNetResNet50(nn.Module):
         return self.input_size
 
 
+class RadImageNetResNet50Single(RadImageNetResNet50):
+    """RadImageNet ResNet50 for single-channel (grayscale) input.
+
+    The pretrained 3-channel first convolution is averaged into one input channel.
+    """
+
+    def __init__(
+        self,
+        dim=(4,),
+        device=None,
+        verbose=True,
+        freeze_backbone=False,
+        weights_path=None,
+        cache_dir=None,
+        local_files_only=False,
+    ):
+        super().__init__(
+            dim=dim,
+            in_channels=1,
+            device=device,
+            verbose=verbose,
+            freeze_backbone=freeze_backbone,
+            weights_path=weights_path,
+            cache_dir=cache_dir,
+            local_files_only=local_files_only,
+        )
+
+
 if __name__ == "__main__":
-    RadImageNetResNet50()
+    RadImageNetResNet50Single()
