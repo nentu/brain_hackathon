@@ -1,8 +1,43 @@
+import os
+
+import cv2
+import numpy as np
 import pytest
 import torch
 
+from brain_hackathon.data.dataset import MODALITIES, AlignedMRIClassificationDataset
 from brain_hackathon.model.resnet_rad import RadImageNetResNet50
-from brain_hackathon.train.test_model import infer_model_config, load_checkpoint
+from brain_hackathon.train.test_model import (
+    cross_validation_test_indices,
+    infer_model_config,
+    load_checkpoint,
+)
+from brain_hackathon.train.utils import ALL_SPLITS
+
+
+def _write_series(class_dir, series_id):
+    os.makedirs(class_dir, exist_ok=True)
+    image = np.full((8, 8), (int(series_id) % 200) + 1, dtype=np.uint8)
+    for modality in MODALITIES:
+        cv2.imwrite(os.path.join(class_dir, f"{series_id}_{modality}.jpg"), image)
+
+
+def test_cross_validation_test_indices(tmp_path):
+    root = tmp_path / "aligned"
+    for i in range(1, 21):
+        _write_series(root / "Train" / "glioma", str(i))
+    for i in range(1, 21):
+        _write_series(root / "Train" / "meningioma", str(i))
+
+    indices, classes = cross_validation_test_indices(str(root))
+    base = AlignedMRIClassificationDataset(
+        root=str(root), split=ALL_SPLITS, augment=None
+    )
+
+    assert classes == base.classes
+    assert len(indices) == 8  # 20% of 40 series
+    assert all(0 <= index < len(base) for index in indices)
+    assert len(set(indices)) == len(indices)
 
 
 def test_infer_model_config_sequential_head():
