@@ -1,0 +1,115 @@
+_wandb:
+    value:
+        cli_version: 0.30.0
+        e:
+            zzzdx1b5usy26s0mg3mb1bdt0foytytn:
+                codePath: .venv/bin/train
+                codePathLocal: .venv/bin/train
+                cpu_count: 14
+                cpu_count_logical: 20
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "1006450962432"
+                        used: "945288933376"
+                executable: /home/artem/Documents/brain_hackaton/.venv/bin/python3
+                git:
+                    commit: e8ccdb0df537871857d8beab38531436b405f46c
+                    remote: https://github.com/nentu/brain_hackathon.git
+                gpu: NVIDIA GeForce RTX 4070 Laptop GPU
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 4608
+                      memoryTotal: "8585740288"
+                      name: NVIDIA GeForce RTX 4070 Laptop GPU
+                      uuid: GPU-d306e092-8d35-b336-54db-2eaf20d0bdf1
+                host: artem-Pulse
+                memory:
+                    total: "33340641280"
+                os: Linux-6.8.0-138-generic-x86_64-with-glibc2.35
+                program: /home/artem/Documents/brain_hackaton/.venv/bin/train
+                python: CPython 3.14.3
+                root: /home/artem/Documents/brain_hackaton
+                startedAt: "2026-10-17T17:25:12.185030Z"
+                writerId: zzzdx1b5usy26s0mg3mb1bdt0foytytn
+        m: []
+        python_version: 3.14.3
+        t:
+            "1":
+                - 1
+                - 41
+                - 49
+                - 80
+            "2":
+                - 1
+                - 41
+                - 49
+                - 80
+            "3":
+                - 2
+                - 3
+                - 16
+                - 61
+                - 62
+            "4": 3.14.3
+            "5": 0.30.0
+            "12": 0.30.0
+            "13": linux-x86_64
+batch_size:
+    value: 32
+checkpoint_dir:
+    value: checkpoints
+dataset:
+    value: raw
+device:
+    value: cuda
+epochs:
+    value: 100
+freeze:
+    value: true
+git_hash:
+    value: e8ccdb0
+head_dims:
+    value:
+        - 4
+initial_eval:
+    value: true
+log_every:
+    value: 5
+loss_period:
+    value: 50
+lr:
+    value: 0.001
+min_delta:
+    value: 0
+n_params:
+    value: 23509956
+n_test:
+    value: 0
+n_train:
+    value: 5296
+n_trainable:
+    value: 8196
+n_val:
+    value: 1325
+no_wandb:
+    value: false
+num_classes:
+    value: 4
+optimizer:
+    value: adamw
+patience:
+    value: 10
+root:
+    value: null
+seed:
+    value: 42
+wandb_mode:
+    value: null
+wandb_project:
+    value: brain-hackathon-raw
+weight_decay:
+    value: 0.0001
+weights:
+    value: null

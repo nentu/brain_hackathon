@@ -1,0 +1,15 @@
+[train] device=cuda epochs=100 batch_size=32 optimizer=adamw lr=0.001
+[epoch   0] loss train=1.3959 val=1.3957 | train acc=0.2460 f1=0.1119 | val acc=0.2438 f1=0.1064
+[epoch   1] loss train=0.8686 val=0.6427 | val acc=0.7630 f1=0.7628
+[34m[1mwandb[0m: [33mWARNING[0m Symlinked 1 file into the W&B run directory; call wandb.save again to sync new files.
+[epoch   5] loss train=0.4402 val=0.4500 | val acc=0.8257 f1=0.8245
+[epoch  10] loss train=0.3695 val=0.4829 | val acc=0.8242 f1=0.8319
+[epoch  15] loss train=0.3281 val=0.3696 | val acc=0.8596 f1=0.8584
+[epoch  20] loss train=0.2885 val=0.3385 | val acc=0.8747 f1=0.8791
+[epoch  25] loss train=0.2767 val=0.3559 | val acc=0.8777 f1=0.8845
+[epoch  30] loss train=0.2704 val=0.2872 | val acc=0.9072 f1=0.9104
+[epoch  35] loss train=0.2324 val=0.2930 | val acc=0.8943 f1=0.8963
+[epoch  40] loss train=0.2252 val=0.2927 | val acc=0.8951 f1=0.8997
+[epoch  45] loss train=0.2165 val=0.3127 | val acc=0.8845 f1=0.8907
+[34m[1mwandb[0m: [33mWARNING[0m Symlinked 1 file into the W&B run directory; call wandb.save again to sync new files.
+[34m[1mwandb[0m: [33mWARNING[0m Artifact "model-cyg0yhoz-best" already exists with the same content. No new version will be created.
