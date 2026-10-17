@@ -96,6 +96,12 @@ def test_freeze_backbone_flag():
     assert all(p.requires_grad for p in trainable.head.parameters())
 
 
+def test_pretrained_false_skips_hub():
+    model = RadImageNetResNet50Single(dim=[4], pretrained=False, verbose=False)
+    assert model.input_size == (1, 224, 224)
+    assert model.backbone[0].in_channels == 1
+
+
 def test_single_channel_model():
     try:
         model = RadImageNetResNet50Single(dim=[4], verbose=False)

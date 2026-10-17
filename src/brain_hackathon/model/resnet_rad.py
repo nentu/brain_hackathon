@@ -38,6 +38,7 @@ class RadImageNetResNet50(nn.Module):
         device=None,
         verbose=True,
         freeze_backbone=False,
+        pretrained=True,
         weights_path=None,
         cache_dir=None,
         local_files_only=False,
@@ -56,7 +57,8 @@ class RadImageNetResNet50(nn.Module):
         self.local_files_only = local_files_only
 
         self.backbone = nn.Sequential(*list(resnet50(weights=None).children())[:-2])
-        self._load_pretrained_backbone()
+        if pretrained:
+            self._load_pretrained_backbone()
         self._expand_first_conv(in_channels)
 
         self.pool = nn.AdaptiveAvgPool2d(1)
@@ -193,6 +195,7 @@ class RadImageNetResNet50Single(RadImageNetResNet50):
         device=None,
         verbose=True,
         freeze_backbone=False,
+        pretrained=True,
         weights_path=None,
         cache_dir=None,
         local_files_only=False,
@@ -203,6 +206,7 @@ class RadImageNetResNet50Single(RadImageNetResNet50):
             device=device,
             verbose=verbose,
             freeze_backbone=freeze_backbone,
+            pretrained=pretrained,
             weights_path=weights_path,
             cache_dir=cache_dir,
             local_files_only=local_files_only,
