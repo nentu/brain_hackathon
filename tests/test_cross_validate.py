@@ -98,3 +98,42 @@ def test_run_cross_validation(aligned_root, tmp_path):
     # four folds + one final run
     assert len(fake_train.calls) == 5
     assert fake_train.calls[-1][2] == sizes["test"]
+
+
+def test_only_final_run_gets_logger(aligned_root, tmp_path, monkeypatch):
+    from brain_hackathon.train import logger as logger_module
+
+    created = []
+
+    class FakeLogger:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            created.append(self)
+
+    monkeypatch.setattr(logger_module, "Logger", FakeLogger)
+
+    seen = []
+
+    def runner(model, train_ds, val_ds, test_dataset=None, **kwargs):
+        seen.append(kwargs.get("logger"))
+        record = {"loss/train": 1.0, "loss/val": 0.5, "loss/test": 0.6}
+        for key in METRIC_KEYS:
+            record[f"{key}/val"] = 0.8
+            record[f"{key}/test"] = 0.7
+        return {"history": [record]}
+
+    run_cross_validation(
+        root=aligned_root,
+        n_splits=2,
+        epochs=1,
+        checkpoint_dir=str(tmp_path / "cv"),
+        verbose=False,
+        train_fn=runner,
+        model_factory=lambda: None,
+        use_wandb=True,
+    )
+
+    assert len(created) == 1
+    assert all(logger is None for logger in seen[:-1])
+    assert seen[-1] is created[0]
+    assert created[0].kwargs["checkpoint_dir"].endswith("final")

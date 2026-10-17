@@ -54,8 +54,15 @@ def run_cross_validation(
     verbose=True,
     train_fn=None,
     model_factory=None,
+    use_wandb=False,
+    wandb_project="brain-hackathon",
+    wandb_mode=None,
+    run_name=None,
 ):
     """Run n-fold CV on the train portion, then train on all of it and test.
+
+    The final full-train run logs to W&B and saves its best/last checkpoints when
+    ``use_wandb`` is enabled (same behaviour as the ``train`` CLI).
 
     Returns ``{"folds": [...], "mean": {...}, "final": {...}, "sizes": {...}}``.
     """
@@ -124,7 +131,6 @@ def run_cross_validation(
         patience=epochs,
         loss_period=10**9,
         device=device,
-        logger=None,
         seed=seed,
     )
 
@@ -140,6 +146,7 @@ def run_cross_validation(
             Subset(train_ds, fit_orig),
             Subset(eval_ds, val_orig),
             checkpoint_dir=os.path.join(checkpoint_dir, f"fold{fold_index}"),
+            logger=None,
             **common,
         )
         metrics = _metrics_from_record(result["history"][-1], "val")
@@ -164,13 +171,35 @@ def run_cross_validation(
             )
         )
 
+    final_checkpoint_dir = os.path.join(checkpoint_dir, "final")
+    logger = None
+    if use_wandb:
+        from brain_hackathon.train.logger import Logger
+
+        logger = Logger(
+            project=wandb_project,
+            run_name=run_name or "cv-final-full-train",
+            mode=wandb_mode,
+            checkpoint_dir=final_checkpoint_dir,
+            config={
+                "stage": "final_full_train",
+                "n_splits": n_splits,
+                "train_frac": train_frac,
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "seed": seed,
+                "freeze_backbone": freeze_backbone,
+            },
+        )
+
     test_subset = Subset(eval_ds, test_orig)
     final = train_fn(
         model_factory(),
         Subset(train_ds, train_orig),
         test_subset,
         test_subset,
-        checkpoint_dir=os.path.join(checkpoint_dir, "final"),
+        checkpoint_dir=final_checkpoint_dir,
+        logger=logger,
         **common,
     )
     final_metrics = _metrics_from_record(final["history"][-1], "test")
@@ -178,6 +207,11 @@ def run_cross_validation(
         print(
             f"final (train={len(train_orig)}, test={len(test_orig)}): "
             + " ".join(f"{k}={v:.4f}" for k, v in final_metrics.items())
+        )
+        print(
+            f"[cv] final checkpoints: best={final.get('best_model_path')} "
+            f"last={final.get('last_model_path')}",
+            flush=True,
         )
 
     return {
@@ -213,12 +247,20 @@ def parse_args(argv=None):
     parser.add_argument(
         "--checkpoint-dir", default=os.path.join("checkpoints", "cv")
     )
+    parser.add_argument("--wandb-project", default="brain-hackathon")
+    parser.add_argument("--wandb-mode", default=None)
+    parser.add_argument("--run-name", default=None)
+    parser.add_argument(
+        "--no-wandb",
+        action="store_true",
+        help="disable W&B logging for the final full-train run",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
-    return run_cross_validation(
+    result = run_cross_validation(
         root=args.root,
         n_splits=args.n_splits,
         train_frac=args.train_frac,
@@ -229,7 +271,12 @@ def main(argv=None):
         freeze_backbone=args.freeze,
         device=args.device,
         checkpoint_dir=args.checkpoint_dir,
+        use_wandb=not args.no_wandb,
+        wandb_project=args.wandb_project,
+        wandb_mode=args.wandb_mode,
+        run_name=args.run_name,
     )
+    return 0 if result is not None else 1
 
 
 if __name__ == "__main__":

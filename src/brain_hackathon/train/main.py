@@ -82,9 +82,7 @@ def main(argv=None):
         freeze_backbone=args.freeze,
         weights_path=args.weights,
     )
-    print(
-        f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True
-    )
+    print(f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True)
     logger = Logger(
         project=args.wandb_project,
         mode=args.wandb_mode,
