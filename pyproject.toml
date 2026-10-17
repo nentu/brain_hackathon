@@ -27,6 +27,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "ipykernel>=6.0",
+    "pandas>=2.3.3",
     "pytest>=7.0",
     "scikit-learn>=1.7.2",
 ]
