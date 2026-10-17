@@ -117,7 +117,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "albumentations" },
-    { name = "dash" },
     { name = "huggingface-hub" },
     { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -133,6 +132,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "dash" },
     { name = "ipykernel", version = "7.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipykernel", version = "7.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -145,7 +145,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "albumentations", specifier = ">=2.0.8" },
-    { name = "dash", specifier = ">=2.16" },
     { name = "huggingface-hub", specifier = ">=0.23" },
     { name = "matplotlib", specifier = ">=3.5" },
     { name = "nbformat", specifier = ">=5.11.1" },
@@ -160,6 +159,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "dash", specifier = ">=2.16" },
     { name = "ipykernel", specifier = ">=6.0" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pytest", specifier = ">=7.0" },
