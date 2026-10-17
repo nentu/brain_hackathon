@@ -8,7 +8,7 @@ import os
 from brain_hackathon.data.dataset import DEFAULT_ROOT
 from brain_hackathon.model.resnet_rad import RadImageNetResNet50
 from brain_hackathon.train.logger import Logger
-from brain_hackathon.train.main import train
+from brain_hackathon.train.trainer import train
 from brain_hackathon.train.utils import build_datasets
 
 DEFAULT_OPTIMIZERS = ("adamw", "sgd")
