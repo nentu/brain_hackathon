@@ -171,8 +171,17 @@ Multi-band модель обучалась с 4-fold кросс-валидаци
 CV mean±std: loss=0.5441±0.1380 acc=0.8332±0.0451 f1=0.8088±0.0621 precision=0.8322±0.0481 recall=0.8118±0.0681 sensitivity=0.8118±0.0681 specificity=0.9431±0.0163
 ```
 
-Средняя accuracy по фолдам составила **83.3%**, macro-F1 — **80.9%**,
-specificity — **94.3%**.
+```
+[test] checkpoint=wandb/run-20261017_202512-cyg0yhoz/files/best.pt epoch=38 val_loss=0.2660983196744379 in_channels=1 head_dims=[4]
+[test] dataset=raw split=raw Train holdout (80/20, seed=42) root='data/Epic and CSCR hospital Dataset' samples=1325 classes=['glioma', 'meningioma', 'notumor', 'pituitary'] device=cuda
+[test] loss=0.2661 acc=0.9147 f1=0.9174 precision=0.9157 recall=0.9201 sensitivity=0.9201 specificity=0.9713
+```
+
+```
+[test] checkpoint=wandb/run-20261017_215657-mb02wu62/files/best.pt epoch=179 val_loss=0.46680214802424114 in_channels=6 head_dims=[4]
+[test] dataset=aligned split=aligned cross-validation holdout (80/20, seed=42) root='data/aligned' samples=120 classes=['glioma', 'meningioma', 'notumor', 'pituitary'] device=cuda
+[test] loss=0.4668 acc=0.8750 f1=0.8676 precision=0.8692 recall=0.8685 sensitivity=0.8685 specificity=0.9561
+```
 
 ## 5. Использование
 
