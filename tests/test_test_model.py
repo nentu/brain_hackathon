@@ -10,7 +10,7 @@ from brain_hackathon.model.resnet_rad import (
     RadImageNetResNet50,
     RadImageNetResNet50Single,
 )
-from brain_hackathon.train.test_model import (
+from brain_hackathon.train.evaluation.test_model import (
     cross_validation_test_indices,
     infer_model_config,
     load_checkpoint,

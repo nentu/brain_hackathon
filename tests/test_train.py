@@ -8,10 +8,10 @@ import torch
 from torch import nn
 
 from brain_hackathon.data.dataset import MODALITIES
-from brain_hackathon.train.early_stopping import EarlyStopping
-from brain_hackathon.train.logger import Logger
+from brain_hackathon.train.core.early_stopping import EarlyStopping
+from brain_hackathon.train.core.metrics import Metrics
 from brain_hackathon.train.main import BEST_OPTIMIZER, build_optimizer, train
-from brain_hackathon.train.metrics import Metrics
+from brain_hackathon.train.tracking.logger import Logger
 from brain_hackathon.train.utils import build_datasets
 
 
@@ -141,7 +141,7 @@ def test_logger_keeps_existing_wandb_env(monkeypatch, tmp_path):
 
 
 def test_logger_config_includes_git_hash(monkeypatch, tmp_path):
-    from brain_hackathon.train import logger as logger_module
+    from brain_hackathon.train.tracking import logger as logger_module
 
     monkeypatch.setattr(logger_module, "git_hash", lambda: "abc1234")
     logger = Logger(checkpoint_dir=str(tmp_path), enabled=False, config={"lr": 1e-3})

@@ -4,7 +4,7 @@ import os
 
 import torch
 
-from brain_hackathon.train.metrics import Metrics
+from brain_hackathon.train.core.metrics import Metrics
 
 
 def resolve_device(device=None):

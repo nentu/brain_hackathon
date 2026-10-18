@@ -1,7 +1,7 @@
 import csv
 import json
 
-from brain_hackathon.train.report import (
+from brain_hackathon.train.hpo.report import (
     load_results,
     sort_records,
     to_markdown,

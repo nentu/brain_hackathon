@@ -6,8 +6,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from brain_hackathon.train.early_stopping import EarlyStopping
-from brain_hackathon.train.engine import (
+from brain_hackathon.train.core.early_stopping import EarlyStopping
+from brain_hackathon.train.core.engine import (
     build_optimizer,
     evaluate,
     evaluate_loss,
@@ -15,7 +15,7 @@ from brain_hackathon.train.engine import (
     resolve_device,
     save_checkpoint,
 )
-from brain_hackathon.train.metrics import Metrics
+from brain_hackathon.train.core.metrics import Metrics
 
 # Defaults from the hyperparameter search (best val_loss/F1).
 BEST_OPTIMIZER = "adamw"

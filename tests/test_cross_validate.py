@@ -5,7 +5,10 @@ import numpy as np
 import pytest
 
 from brain_hackathon.data.dataset import MODALITIES
-from brain_hackathon.train.cross_validate import METRIC_KEYS, run_cross_validation
+from brain_hackathon.train.evaluation.cross_validate import (
+    METRIC_KEYS,
+    run_cross_validation,
+)
 from brain_hackathon.train.utils import stratified_kfold
 
 
@@ -101,7 +104,7 @@ def test_run_cross_validation(aligned_root, tmp_path):
 
 
 def test_only_final_run_gets_logger(aligned_root, tmp_path, monkeypatch):
-    from brain_hackathon.train import logger as logger_module
+    from brain_hackathon.train.tracking import logger as logger_module
 
     created = []
 

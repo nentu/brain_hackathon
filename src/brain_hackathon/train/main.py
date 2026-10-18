@@ -2,8 +2,8 @@
 
 import argparse
 
-from brain_hackathon.train.early_stopping import EarlyStopping
-from brain_hackathon.train.engine import (
+from brain_hackathon.train.core.early_stopping import EarlyStopping
+from brain_hackathon.train.core.engine import (
     build_optimizer,
     evaluate,
     evaluate_loss,
@@ -11,14 +11,14 @@ from brain_hackathon.train.engine import (
     resolve_device,
     save_checkpoint,
 )
-from brain_hackathon.train.logger import Logger
-from brain_hackathon.train.metrics import METRIC_NAMES, Metrics
-from brain_hackathon.train.trainer import (
+from brain_hackathon.train.core.metrics import METRIC_NAMES, Metrics
+from brain_hackathon.train.core.trainer import (
     BEST_LR,
     BEST_OPTIMIZER,
     BEST_WEIGHT_DECAY,
     train,
 )
+from brain_hackathon.train.tracking.logger import Logger
 
 __all__ = [
     "BEST_LR",

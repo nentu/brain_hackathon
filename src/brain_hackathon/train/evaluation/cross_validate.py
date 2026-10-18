@@ -12,7 +12,7 @@ from torch.utils.data import Subset
 from brain_hackathon.data.augmentation import train_aug, val_aug
 from brain_hackathon.data.dataset import DEFAULT_ROOT, AlignedMRIClassificationDataset
 from brain_hackathon.model.resnet_rad import RadImageNetResNet50
-from brain_hackathon.train.trainer import train
+from brain_hackathon.train.core.trainer import train
 from brain_hackathon.train.utils import (
     ALL_SPLITS,
     content_groups,
@@ -168,7 +168,7 @@ def run_cross_validation(
     final_checkpoint_dir = os.path.join(checkpoint_dir, "final")
     logger = None
     if use_wandb:
-        from brain_hackathon.train.logger import Logger
+        from brain_hackathon.train.tracking.logger import Logger
 
         logger = Logger(
             project=wandb_project,

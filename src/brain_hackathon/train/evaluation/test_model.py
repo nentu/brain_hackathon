@@ -27,8 +27,8 @@ from brain_hackathon.model.resnet_rad import (
     RadImageNetResNet50,
     RadImageNetResNet50Single,
 )
-from brain_hackathon.train.cross_validate import _dedup_indices
-from brain_hackathon.train.engine import evaluate, resolve_device
+from brain_hackathon.train.core.engine import evaluate, resolve_device
+from brain_hackathon.train.evaluation.cross_validate import _dedup_indices
 from brain_hackathon.train.utils import ALL_SPLITS, stratified_indices
 
 

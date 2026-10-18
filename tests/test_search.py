@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from brain_hackathon.data.dataset import MODALITIES
-from brain_hackathon.train.search import (
+from brain_hackathon.train.hpo.search import (
     config_name,
     grid_search,
     iter_configs,
