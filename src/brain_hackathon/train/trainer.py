@@ -19,8 +19,8 @@ from brain_hackathon.train.metrics import Metrics
 
 # Defaults from the hyperparameter search (best val_loss/F1).
 BEST_OPTIMIZER = "adamw"
-BEST_LR = 2e-3
-BEST_WEIGHT_DECAY = 1e-4
+BEST_LR = 1e-3
+BEST_WEIGHT_DECAY = 1e-4  # 1e-4
 
 
 def train(
@@ -38,6 +38,7 @@ def train(
     min_delta=0.0,
     loss_period=50,
     log_every=5,
+    initial_eval=True,
     device=None,
     logger=None,
     num_workers=0,
@@ -52,7 +53,9 @@ def train(
     """
     torch.manual_seed(seed)
     device = resolve_device(device)
-    optimizer_name = optimizer if isinstance(optimizer, str) else type(optimizer).__name__
+    optimizer_name = (
+        optimizer if isinstance(optimizer, str) else type(optimizer).__name__
+    )
     print(
         f"[train] device={device} epochs={epochs} batch_size={batch_size} "
         f"optimizer={optimizer_name} lr={lr}",
@@ -98,6 +101,8 @@ def train(
                 "patience": patience,
                 "min_delta": min_delta,
                 "loss_period": loss_period,
+                "log_every": log_every,
+                "initial_eval": initial_eval,
                 "seed": seed,
                 "device": str(device),
                 "num_classes": num_classes,
@@ -111,6 +116,45 @@ def train(
                 ),
             }
         )
+
+    if initial_eval:
+        train_loss0, train_metrics0 = evaluate(
+            model, train_loader, criterion, device, num_classes
+        )
+        val_loss0, val_metrics0 = evaluate(
+            model, val_loader, criterion, device, num_classes
+        )
+        message = (
+            f"[epoch   0] loss train={train_loss0:.4f} val={val_loss0:.4f}"
+        )
+        message += (
+            f" | train acc={train_metrics0['acc']:.4f} "
+            f"f1={train_metrics0['f1']:.4f}"
+        )
+        message += (
+            f" | val acc={val_metrics0['acc']:.4f} "
+            f"f1={val_metrics0['f1']:.4f}"
+        )
+
+        record0 = {
+            "loss/train": train_loss0,
+            **{f"{k}/train": v for k, v in train_metrics0.items()},
+            "loss/val": val_loss0,
+            **{f"{k}/val": v for k, v in val_metrics0.items()},
+        }
+        if test_loader is not None:
+            test_loss0, test_metrics0 = evaluate(
+                model, test_loader, criterion, device, num_classes
+            )
+            message += f" | test loss={test_loss0:.4f}"
+            record0["loss/test"] = test_loss0
+            record0.update(
+                {f"{k}/test": v for k, v in test_metrics0.items()}
+            )
+        print(message, flush=True)
+
+        if logger is not None:
+            logger.log(record0, step=0)
 
     early = EarlyStopping(patience=patience, min_delta=min_delta)
 
@@ -173,9 +217,7 @@ def train(
             record["loss/test"] = test_loss
             record.update({f"{k}/test": v for k, v in test_metrics.items()})
 
-        if log_every and (
-            epoch == 1 or epoch % log_every == 0 or epoch == epochs
-        ):
+        if log_every and (epoch == 1 or epoch % log_every == 0 or epoch == epochs):
             message = (
                 f"[epoch {epoch:3d}] loss train={record['loss/train']:.4f} "
                 f"val={record['loss/val']:.4f}"
@@ -185,8 +227,7 @@ def train(
             message += f" | val acc={record['acc/val']:.4f} f1={record['f1/val']:.4f}"
             if "acc/test" in record:
                 message += (
-                    f" | test acc={record['acc/test']:.4f} "
-                    f"f1={record['f1/test']:.4f}"
+                    f" | test acc={record['acc/test']:.4f} f1={record['f1/test']:.4f}"
                 )
             print(message, flush=True)
 

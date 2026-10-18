@@ -1,6 +1,10 @@
-"""Evaluate a saved checkpoint on the aligned Test split.
+"""Evaluate a saved checkpoint on a test split.
 
-    uv run test_model --checkpoint checkpoints/best.pt
+    # aligned: same 80/20 holdout used by cross-validation (default)
+    uv run test_model --checkpoint checkpoints/best.pt --dataset aligned --split cv
+
+    # raw: original raw Test split
+    uv run test_model --checkpoint checkpoints/raw_best.pt --dataset raw --split test
 """
 
 import argparse
@@ -14,7 +18,11 @@ from brain_hackathon.data.dataset import (
     DEFAULT_ROOT,
     AlignedMRIClassificationDataset,
 )
-from brain_hackathon.model.resnet_rad import RadImageNetResNet50
+from brain_hackathon.data.raw_dataset import RAW_ROOT, RawImageDataset
+from brain_hackathon.model.resnet_rad import (
+    RadImageNetResNet50,
+    RadImageNetResNet50Single,
+)
 from brain_hackathon.train.cross_validate import _dedup_indices
 from brain_hackathon.train.engine import evaluate, resolve_device
 from brain_hackathon.train.utils import ALL_SPLITS, stratified_indices
@@ -43,12 +51,17 @@ def infer_model_config(state_dict):
 
 
 def build_model(in_channels, dims, device=None):
-    model = RadImageNetResNet50(
-        dim=dims,
-        in_channels=in_channels,
-        verbose=False,
-        pretrained=False,
-    )
+    if in_channels == 1:
+        model = RadImageNetResNet50Single(
+            dim=dims, verbose=False, pretrained=False
+        )
+    else:
+        model = RadImageNetResNet50(
+            dim=dims,
+            in_channels=in_channels,
+            verbose=False,
+            pretrained=False,
+        )
     return model.to(device) if device is not None else model
 
 
@@ -78,11 +91,7 @@ def load_checkpoint(path, device="cpu"):
 
 
 def cross_validation_test_indices(root, train_frac=0.8, seed=42):
-    """Return the indices of the 20% holdout used by cross-validation.
-
-    Uses the same dedup + stratified 80/20 split as
-    :func:`brain_hackathon.train.cross_validate.run_cross_validation`.
-    """
+    """Return the indices of the 20% aligned holdout used by cross-validation."""
     base = AlignedMRIClassificationDataset(
         root=root, split=ALL_SPLITS, augment=None
     )
@@ -98,6 +107,35 @@ def cross_validation_test_indices(root, train_frac=0.8, seed=42):
     return [keep[p] for p in test_pos], base.classes
 
 
+def make_test_dataset(dataset_kind, split_mode, root, train_frac=0.8, seed=42):
+    """Return ``(dataset, classes, split_label)``."""
+    if dataset_kind == "raw":
+        if split_mode == "cv":
+            raise ValueError("--split cv is only supported for --dataset aligned")
+        dataset = RawImageDataset(root=root, split="Test", normalize=True)
+        return dataset, dataset.classes, "raw original Test split"
+
+    if split_mode == "cv":
+        indices, classes = cross_validation_test_indices(root, train_frac, seed)
+        dataset = Subset(
+            AlignedMRIClassificationDataset(
+                root=root, split=ALL_SPLITS, augment=val_aug
+            ),
+            indices,
+        )
+        label = (
+            f"aligned cross-validation holdout "
+            f"({round(train_frac * 100)}/"
+            f"{round((1 - train_frac) * 100)}, seed={seed})"
+        )
+        return dataset, classes, label
+
+    dataset = AlignedMRIClassificationDataset(
+        root=root, split="Test", augment=None
+    )
+    return dataset, dataset.classes, "aligned original Test split"
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Evaluate a checkpoint on a test split."
@@ -105,13 +143,25 @@ def parse_args(argv=None):
     parser.add_argument(
         "--checkpoint", required=True, help="path to best.pt / last.pt"
     )
-    parser.add_argument("--root", default=DEFAULT_ROOT, help="aligned dataset root")
+    parser.add_argument(
+        "--dataset",
+        choices=("raw", "aligned"),
+        default="aligned",
+        help="raw: single-channel Test split + 1-channel model; "
+        "aligned: 6-channel dataset + 6-channel model",
+    )
     parser.add_argument(
         "--split",
         choices=("cv", "test"),
         default="cv",
-        help="cv: same 80/20 holdout as cross-validation (default); "
-        "test: the original data/aligned/Test directory",
+        help="aligned: 'cv' uses the cross-validation holdout, 'test' the "
+        "original Test dir; raw only supports 'test'",
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="dataset root (default: raw dataset root for 'raw', "
+        "data/aligned for 'aligned')",
     )
     parser.add_argument("--train-frac", type=float, default=0.8)
     parser.add_argument("--seed", type=int, default=42)
@@ -126,37 +176,25 @@ def main(argv=None):
     device = resolve_device(args.device)
     model, info = load_checkpoint(args.checkpoint, device)
 
-    if args.split == "cv":
-        indices, classes = cross_validation_test_indices(
-            args.root, args.train_frac, args.seed
+    root = args.root or (RAW_ROOT if args.dataset == "raw" else DEFAULT_ROOT)
+    try:
+        dataset, classes, split_label = make_test_dataset(
+            args.dataset, args.split, root, args.train_frac, args.seed
         )
-        dataset = Subset(
-            AlignedMRIClassificationDataset(
-                root=args.root, split=ALL_SPLITS, augment=val_aug
-            ),
-            indices,
-        )
-        split_label = (
-            f"cross-validation holdout "
-            f"({round(args.train_frac * 100)}/"
-            f"{round((1 - args.train_frac) * 100)}, seed={args.seed})"
-        )
-    else:
-        dataset = AlignedMRIClassificationDataset(
-            root=args.root, split="Test", augment=None
-        )
-        classes = dataset.classes
-        split_label = "original Test directory"
+    except ValueError as exc:
+        raise SystemExit(str(exc))
 
     if len(dataset) == 0:
-        raise SystemExit(f"empty test split under root={args.root!r}")
+        raise SystemExit(
+            f"empty test split for dataset={args.dataset} under root={root!r}"
+        )
 
     sample, _ = dataset[0]
     channels = int(sample.shape[0])
     if channels != info["in_channels"]:
         raise SystemExit(
             f"checkpoint expects {info['in_channels']} channels but "
-            f"the split yields {channels}"
+            f"--dataset {args.dataset} yields {channels}; use the matching --dataset"
         )
     if info["head_dims"][-1] != len(classes):
         raise SystemExit(
@@ -171,7 +209,7 @@ def main(argv=None):
         flush=True,
     )
     print(
-        f"[test] split={split_label} root={args.root!r} "
+        f"[test] dataset={args.dataset} split={split_label} root={root!r} "
         f"samples={len(dataset)} classes={classes} device={device}",
         flush=True,
     )

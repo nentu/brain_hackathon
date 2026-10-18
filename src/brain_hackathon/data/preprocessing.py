@@ -3,6 +3,14 @@ import math
 import cv2
 import numpy as np
 
+IMAGE_SIZE = (224, 224)
+
+
+def resize_image(image, size=IMAGE_SIZE):
+    """Resize to ``size`` (width, height) using ``cv2.INTER_AREA``."""
+    return cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+
+
 ORB = cv2.ORB_create(
     nfeatures=3000,
     scaleFactor=1.2,
@@ -211,8 +219,11 @@ def center_transforms(transform_list):
 def process_images(img_list):
     for i in range(len(img_list)):
         if len(img_list[i].shape) != 2:
-            img_list[i] = cv2.cvtColor(img_list[i], cv2.COLOR_BGR2GRAY)
-    ref_gray = img_list[0]  # TODO FIX результат зависит от id.
+            img = cv2.cvtColor(img_list[i], cv2.COLOR_BGR2GRAY)
+            if img.shape != [224, 224]:
+                img = cv2.resize(img, [224, 224], interpolation=cv2.INTER_AREA)
+            img_list[i] = img
+    ref_gray = img_list[-1]
 
     kp_ref, des_ref = features(ref_gray)
     results = []
@@ -261,7 +272,7 @@ def process_images(img_list):
             )
 
     results = [adapter_image_transforms(i) for i in results]
-    results = center_transforms(results)
+    # results = center_transforms(results)
     return results
 
 

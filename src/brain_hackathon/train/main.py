@@ -35,12 +35,13 @@ __all__ = [
     "num_classes_of",
     "resolve_device",
     "save_checkpoint",
+    "split_train_val",
     "train",
 ]
 
 
-def split_train_val(dataset, val_fraction=0.2, seed=42):
-    """Split the aligned Train dataset into train/val (stratified, group-aware)."""
+def split_train_val(dataset, kind, val_fraction=0.2, seed=42):
+    """Split only the Train dataset into train/val (stratified, group-aware)."""
     from torch.utils.data import Subset
 
     from brain_hackathon.train.utils import stratified_indices
@@ -48,8 +49,13 @@ def split_train_val(dataset, val_fraction=0.2, seed=42):
     if len(dataset) < 2:
         raise ValueError("need at least 2 samples to split train/val")
 
-    labels = [dataset.class_to_idx[entry[1]] for entry in dataset.index]
-    groups = [(entry[1], entry[0]) for entry in dataset.index]
+    if kind == "raw":
+        labels = [int(entry[1]) for entry in dataset.index]
+        groups = list(range(len(labels)))
+    else:
+        labels = [dataset.class_to_idx[entry[1]] for entry in dataset.index]
+        groups = [(entry[1], entry[0]) for entry in dataset.index]
+
     train_pos, val_pos, _ = stratified_indices(
         labels,
         groups,
@@ -61,9 +67,21 @@ def split_train_val(dataset, val_fraction=0.2, seed=42):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        description="Train RadImageNet on the aligned MRI dataset."
+        description="Train on the dataset's Train split and evaluate on Test."
     )
-    parser.add_argument("--root", default="data/aligned")
+    parser.add_argument(
+        "--dataset",
+        choices=("raw", "aligned"),
+        default="raw",
+        help="raw: single-channel images + 1-channel model; "
+        "aligned: 6-channel aligned dataset + 6-channel model",
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="dataset root (default: raw dataset root for 'raw', "
+        "data/aligned for 'aligned')",
+    )
     parser.add_argument(
         "--weights",
         default=None,
@@ -72,7 +90,7 @@ def parse_args(argv=None):
     parser.add_argument("--optimizer", default=BEST_OPTIMIZER)
     parser.add_argument("--lr", type=float, default=BEST_LR)
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--weight-decay", type=float, default=BEST_WEIGHT_DECAY)
     parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--loss-period", type=int, default=50)
@@ -100,41 +118,56 @@ def main(argv=None):
         DEFAULT_ROOT,
         AlignedMRIClassificationDataset,
     )
-    from brain_hackathon.model.resnet_rad import RadImageNetResNet50
+    from brain_hackathon.data.raw_dataset import RAW_ROOT, RawImageDataset
+    from brain_hackathon.model.resnet_rad import (
+        RadImageNetResNet50,
+        RadImageNetResNet50Single,
+    )
 
     args = parse_args(argv)
-    root = args.root or DEFAULT_ROOT
+    root = args.root or (RAW_ROOT if args.dataset == "raw" else DEFAULT_ROOT)
 
-    train_full = AlignedMRIClassificationDataset(
-        root=root, split="Train", augment=train_aug
-    )
-    test_ds = AlignedMRIClassificationDataset(
-        root=root, split="Test", augment=val_aug
-    )
-    if len(train_full) == 0 or len(test_ds) == 0:
-        raise SystemExit(
-            f"empty Train/Test split under root={root!r} "
-            f"(train={len(train_full)}, test={len(test_ds)})"
+    if args.dataset == "raw":
+        train_ds = RawImageDataset(root=root, split="Train", verbose=True)
+        test_ds = RawImageDataset(root=root, split="Test", verbose=True)
+        model_class = RadImageNetResNet50Single
+    else:
+        train_ds = AlignedMRIClassificationDataset(
+            root=root, split="Train", augment=train_aug
         )
-    if train_full.classes != test_ds.classes:
+        test_ds = AlignedMRIClassificationDataset(
+            root=root, split="Test", augment=val_aug
+        )
+        model_class = RadImageNetResNet50
+
+    if len(train_ds) == 0 or len(test_ds) == 0:
         raise SystemExit(
-            f"class mismatch: Train={train_full.classes} Test={test_ds.classes}"
+            f"empty split under root={root!r} "
+            f"(train={len(train_ds)}, test={len(test_ds)})"
+        )
+    if train_ds.classes != test_ds.classes:
+        raise SystemExit(
+            f"class mismatch: train={train_ds.classes} test={test_ds.classes}"
         )
 
-    train_ds, val_ds = split_train_val(
-        train_full, val_fraction=0.2, seed=args.seed
+    train_split, val_split = split_train_val(
+        train_ds, args.dataset, val_fraction=0.2, seed=args.seed
     )
     print(
-        f"[data] Train={len(train_full)} -> train={len(train_ds)} "
-        f"val={len(val_ds)}; Test={len(test_ds)}",
+        f"[data] dataset={args.dataset} root={root!r} "
+        f"train={len(train_ds)} test={len(test_ds)} classes={train_ds.classes}",
         flush=True,
     )
     print(
-        "[data] Test is not used during training; only the best model is evaluated",
+        f"[data] Train split 80/20: train={len(train_split)} "
+        f"val={len(val_split)}; Test is only used for the final evaluation",
         flush=True,
     )
 
-    present = {entry[1] for entry in test_ds.index}
+    if args.dataset == "raw":
+        present = {test_ds.classes[int(entry[1])] for entry in test_ds.index}
+    else:
+        present = {entry[1] for entry in test_ds.index}
     absent = [name for name in test_ds.classes if name not in present]
     if absent:
         print(
@@ -143,8 +176,8 @@ def main(argv=None):
             flush=True,
         )
 
-    model = RadImageNetResNet50(
-        dim=[len(train_full.classes)],
+    model = model_class(
+        dim=[len(train_ds.classes)],
         freeze_backbone=args.freeze,
         weights_path=args.weights,
     )
@@ -159,8 +192,8 @@ def main(argv=None):
     # Train/val only: no test loss, no test-based early stopping.
     result = train(
         model,
-        train_ds,
-        val_ds,
+        train_split,
+        val_split,
         None,
         optimizer=args.optimizer,
         lr=args.lr,
