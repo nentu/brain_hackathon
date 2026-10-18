@@ -1,10 +1,14 @@
 """Evaluate a saved checkpoint on a test split.
 
-    # aligned: same 80/20 holdout used by cross-validation (default)
+    # 20% holdout of the Train dir (80/20, same seed as training)
+    uv run test_model --checkpoint checkpoints/best.pt --dataset aligned --split test
+    uv run test_model --checkpoint checkpoints/raw_best.pt --dataset raw --split test
+
+    # aligned: same holdout used by cross-validation
     uv run test_model --checkpoint checkpoints/best.pt --dataset aligned --split cv
 
-    # raw: original raw Test split
-    uv run test_model --checkpoint checkpoints/raw_best.pt --dataset raw --split test
+    # original Test directory
+    uv run test_model --checkpoint checkpoints/best.pt --dataset aligned --split test-dir
 """
 
 import argparse
@@ -107,15 +111,56 @@ def cross_validation_test_indices(root, train_frac=0.8, seed=42):
     return [keep[p] for p in test_pos], base.classes
 
 
+def train_holdout_indices(root, dataset_kind, train_frac=0.8, seed=42):
+    """Indices of the held-out part of the Train dir (80/20, stratified)."""
+    if dataset_kind == "raw":
+        dataset = RawImageDataset(root=root, split="Train", normalize=True)
+        labels = [int(entry[1]) for entry in dataset.index]
+        groups = list(range(len(labels)))
+    else:
+        dataset = AlignedMRIClassificationDataset(
+            root=root, split="Train", augment=None
+        )
+        labels = [dataset.class_to_idx[entry[1]] for entry in dataset.index]
+        groups = [(entry[1], entry[0]) for entry in dataset.index]
+
+    _, test_pos, _ = stratified_indices(
+        labels,
+        groups,
+        (train_frac, 1.0 - train_frac, 0.0),
+        seed,
+    )
+    return test_pos, dataset.classes
+
+
 def make_test_dataset(dataset_kind, split_mode, root, train_frac=0.8, seed=42):
     """Return ``(dataset, classes, split_label)``."""
-    if dataset_kind == "raw":
-        if split_mode == "cv":
-            raise ValueError("--split cv is only supported for --dataset aligned")
-        dataset = RawImageDataset(root=root, split="Test", normalize=True)
-        return dataset, dataset.classes, "raw original Test split"
+    if split_mode == "test":
+        indices, classes = train_holdout_indices(
+            root, dataset_kind, train_frac, seed
+        )
+        if dataset_kind == "raw":
+            dataset = Subset(
+                RawImageDataset(root=root, split="Train", normalize=True),
+                indices,
+            )
+        else:
+            dataset = Subset(
+                AlignedMRIClassificationDataset(
+                    root=root, split="Train", augment=val_aug
+                ),
+                indices,
+            )
+        label = (
+            f"{dataset_kind} Train holdout "
+            f"({round(train_frac * 100)}/"
+            f"{round((1 - train_frac) * 100)}, seed={seed})"
+        )
+        return dataset, classes, label
 
     if split_mode == "cv":
+        if dataset_kind != "aligned":
+            raise ValueError("--split cv is only supported for --dataset aligned")
         indices, classes = cross_validation_test_indices(root, train_frac, seed)
         dataset = Subset(
             AlignedMRIClassificationDataset(
@@ -130,10 +175,14 @@ def make_test_dataset(dataset_kind, split_mode, root, train_frac=0.8, seed=42):
         )
         return dataset, classes, label
 
-    dataset = AlignedMRIClassificationDataset(
-        root=root, split="Test", augment=None
-    )
-    return dataset, dataset.classes, "aligned original Test split"
+    # split_mode == "test-dir": the original Test directory
+    if dataset_kind == "raw":
+        dataset = RawImageDataset(root=root, split="Test", normalize=True)
+    else:
+        dataset = AlignedMRIClassificationDataset(
+            root=root, split="Test", augment=None
+        )
+    return dataset, dataset.classes, f"{dataset_kind} original Test directory"
 
 
 def parse_args(argv=None):
@@ -152,10 +201,11 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--split",
-        choices=("cv", "test"),
+        choices=("cv", "test", "test-dir"),
         default="cv",
-        help="aligned: 'cv' uses the cross-validation holdout, 'test' the "
-        "original Test dir; raw only supports 'test'",
+        help="test: 20%% holdout of the Train dir (80/20, same seed); "
+        "cv: aligned cross-validation holdout (aligned only); "
+        "test-dir: the original Test directory",
     )
     parser.add_argument(
         "--root",

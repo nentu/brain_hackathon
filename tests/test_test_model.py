@@ -14,6 +14,7 @@ from brain_hackathon.train.test_model import (
     cross_validation_test_indices,
     infer_model_config,
     load_checkpoint,
+    train_holdout_indices,
 )
 from brain_hackathon.train.utils import ALL_SPLITS
 
@@ -35,6 +36,24 @@ def test_cross_validation_test_indices(tmp_path):
     indices, classes = cross_validation_test_indices(str(root))
     base = AlignedMRIClassificationDataset(
         root=str(root), split=ALL_SPLITS, augment=None
+    )
+
+    assert classes == base.classes
+    assert len(indices) == 8  # 20% of 40 series
+    assert all(0 <= index < len(base) for index in indices)
+    assert len(set(indices)) == len(indices)
+
+
+def test_train_holdout_indices(tmp_path):
+    root = tmp_path / "aligned"
+    for i in range(1, 21):
+        _write_series(root / "Train" / "glioma", str(i))
+    for i in range(1, 21):
+        _write_series(root / "Train" / "meningioma", str(i))
+
+    indices, classes = train_holdout_indices(str(root), "aligned")
+    base = AlignedMRIClassificationDataset(
+        root=str(root), split="Train", augment=None
     )
 
     assert classes == base.classes
