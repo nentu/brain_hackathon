@@ -13,3 +13,11 @@
 
 
 CV mean±std: loss=0.5441±0.1380 acc=0.8332±0.0451 f1=0.8088±0.0621 precision=0.8322±0.0481 recall=0.8118±0.0681 sensitivity=0.8118±0.0681 specificity=0.9431±0.0163
+
+
+# How to test
+
+```
+uv run test_model --checkpoint wandb/run-20261017_202512-cyg0yhoz/files/best.pt --split test --dataset raw
+uv run test_model --checkpoint wandb/run-20261017_215657-mb02wu62/files/best.pt --split cv --dataset aligned
+```
