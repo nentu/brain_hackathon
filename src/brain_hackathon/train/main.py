@@ -39,6 +39,26 @@ __all__ = [
 ]
 
 
+def split_train_val(dataset, val_fraction=0.2, seed=42):
+    """Split the aligned Train dataset into train/val (stratified, group-aware)."""
+    from torch.utils.data import Subset
+
+    from brain_hackathon.train.utils import stratified_indices
+
+    if len(dataset) < 2:
+        raise ValueError("need at least 2 samples to split train/val")
+
+    labels = [dataset.class_to_idx[entry[1]] for entry in dataset.index]
+    groups = [(entry[1], entry[0]) for entry in dataset.index]
+    train_pos, val_pos, _ = stratified_indices(
+        labels,
+        groups,
+        (1.0 - val_fraction, val_fraction, 0.0),
+        seed,
+    )
+    return Subset(dataset, train_pos), Subset(dataset, val_pos)
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Train RadImageNet on the aligned MRI dataset."
@@ -75,22 +95,60 @@ def main(argv=None):
     from torch import nn
     from torch.utils.data import DataLoader
 
+    from brain_hackathon.data.augmentation import train_aug, val_aug
+    from brain_hackathon.data.dataset import (
+        DEFAULT_ROOT,
+        AlignedMRIClassificationDataset,
+    )
     from brain_hackathon.model.resnet_rad import RadImageNetResNet50
-    from brain_hackathon.train.utils import build_datasets
 
     args = parse_args(argv)
+    root = args.root or DEFAULT_ROOT
 
-    train_ds, val_ds, test_ds = build_datasets(root=args.root, verbose=True)
-    model = RadImageNetResNet50(
-        dim=[len(train_ds.dataset.classes)],
-        freeze_backbone=args.freeze,
-        weights_path=args.weights,
+    train_full = AlignedMRIClassificationDataset(
+        root=root, split="Train", augment=train_aug
     )
-    print(f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True)
+    test_ds = AlignedMRIClassificationDataset(
+        root=root, split="Test", augment=val_aug
+    )
+    if len(train_full) == 0 or len(test_ds) == 0:
+        raise SystemExit(
+            f"empty Train/Test split under root={root!r} "
+            f"(train={len(train_full)}, test={len(test_ds)})"
+        )
+    if train_full.classes != test_ds.classes:
+        raise SystemExit(
+            f"class mismatch: Train={train_full.classes} Test={test_ds.classes}"
+        )
+
+    train_ds, val_ds = split_train_val(
+        train_full, val_fraction=0.2, seed=args.seed
+    )
+    print(
+        f"[data] Train={len(train_full)} -> train={len(train_ds)} "
+        f"val={len(val_ds)}; Test={len(test_ds)}",
+        flush=True,
+    )
     print(
         "[data] Test is not used during training; only the best model is evaluated",
         flush=True,
     )
+
+    present = {entry[1] for entry in test_ds.index}
+    absent = [name for name in test_ds.classes if name not in present]
+    if absent:
+        print(
+            f"[test] WARNING: Test has no samples for {absent}; "
+            "macro metrics include zeros for them",
+            flush=True,
+        )
+
+    model = RadImageNetResNet50(
+        dim=[len(train_full.classes)],
+        freeze_backbone=args.freeze,
+        weights_path=args.weights,
+    )
+    print(f"[model] head dims={model.dim} freeze_backbone={args.freeze}", flush=True)
     logger = Logger(
         project=args.wandb_project,
         mode=args.wandb_mode,
@@ -132,7 +190,7 @@ def main(argv=None):
         test_loader,
         nn.CrossEntropyLoss(),
         device,
-        len(test_ds.dataset.classes),
+        len(test_ds.classes),
     )
     print(
         f"[test] loss={test_loss:.4f} "
