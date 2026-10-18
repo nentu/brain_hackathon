@@ -9,8 +9,8 @@ def group_up(col_list):
         cur_list = res_dict.get(k, [])
         cur_list.append(v)
         res_dict[k] = cur_list
-    for k in res_dict:
-        res_dict[k].append(f'{res_dict[k][0][0]}_{k}.jpg')
+    for k, values in res_dict.items():
+        values.append(f"{values[0][0]}_{k}.jpg")
     return res_dict
 
 

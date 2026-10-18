@@ -14,7 +14,7 @@ def git_hash():
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return None
 
 
@@ -70,7 +70,7 @@ class Logger:
                     mode=mode,
                     dir=dir,
                 )
-            except Exception as exc:  # pragma: no cover - depends on environment
+            except Exception as exc:  # noqa: BLE001
                 print(f"W&B disabled: {exc}")
                 self.enabled = False
 
@@ -80,8 +80,8 @@ class Logger:
         if self.run is not None:
             try:
                 self.run.config.update(data, allow_val_change=True)
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                return self.config
         return self.config
 
     def log(self, data, step=None):
@@ -106,8 +106,8 @@ class Logger:
                     self._wandb.save(
                         path, base_path=os.path.dirname(os.path.abspath(path))
                     )
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                return
 
     def log_model_artifact(self, path, name=None, aliases=("best",)):
         """Upload a checkpoint to W&B as a versioned model artifact."""
@@ -120,7 +120,7 @@ class Logger:
             artifact.add_file(path)
             self.run.log_artifact(artifact, aliases=list(aliases))
             return artifact
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def finish(self, results_path=None):
@@ -151,6 +151,6 @@ class Logger:
                         self.last_path, name=f"model-{run_id}-last", aliases=("last",)
                     )
                 self.run.finish()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                return results_path
         return results_path

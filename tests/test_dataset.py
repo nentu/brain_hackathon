@@ -195,7 +195,7 @@ def test_class_filter(aligned_root):
         root=aligned_root, split="Train", classes=["meningioma"]
     )
     assert len(dataset) == 1
-    tensor, label = dataset[0]
+    _tensor, label = dataset[0]
     assert dataset.classes == ["meningioma"]
     assert label == 0
 

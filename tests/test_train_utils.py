@@ -102,7 +102,7 @@ def test_content_duplicates_stay_in_same_fold(tmp_path):
 
 def test_build_datasets_stratified(aligned_root):
     base = _base(aligned_root)
-    train, val, test = build_datasets(
+    train, _val, _test = build_datasets(
         root=aligned_root, splits=("Train", "Test"), train_transform=None,
         eval_transform=None,
     )

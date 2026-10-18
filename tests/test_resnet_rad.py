@@ -17,7 +17,7 @@ from brain_hackathon.model.resnet_rad import (
 def model():
     try:
         return RadImageNetResNet50(verbose=False)
-    except Exception as exc:  # network / weights unavailable
+    except Exception as exc:  # noqa: BLE001
         pytest.skip(f"RadImageNet weights unavailable: {exc}")
 
 
@@ -36,7 +36,7 @@ def test_forward_output_shape(model):
 def test_custom_dim_list_builds_mlp_head():
     try:
         model = RadImageNetResNet50(dim=[16, 7], verbose=False)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         pytest.skip(f"RadImageNet weights unavailable: {exc}")
 
     linears = [m for m in model.head if isinstance(m, torch.nn.Linear)]
@@ -62,7 +62,7 @@ def test_first_conv_weights_duplicated(model):
 def _new_model(**kwargs):
     try:
         return RadImageNetResNet50(verbose=False, **kwargs)
-    except Exception as exc:  # network / weights unavailable
+    except Exception as exc:  # noqa: BLE001
         pytest.skip(f"RadImageNet weights unavailable: {exc}")
 
 
@@ -105,7 +105,7 @@ def test_pretrained_false_skips_hub():
 def test_single_channel_model():
     try:
         model = RadImageNetResNet50Single(dim=[4], verbose=False)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         pytest.skip(f"RadImageNet weights unavailable: {exc}")
 
     assert model.input_size == (1, 224, 224)

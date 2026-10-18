@@ -15,6 +15,7 @@ DEFAULT_OPTIMIZERS = ("adamw", "sgd")
 DEFAULT_LRS = (1e-2, 1e-3, 1e-4)
 DEFAULT_WEIGHT_DECAYS = (0.0, 1e-4, 1e-2)
 DEFAULT_FREEZES = (None, 0)
+DEFAULT_SEARCH_CHECKPOINT_DIR = os.path.join("checkpoints", "search")
 
 
 def iter_configs(optimizers, lrs, weight_decays, freezes):
@@ -96,7 +97,7 @@ def grid_search(
     num_workers=4,
     max_runs=None,
     results_path=None,
-    checkpoint_dir=os.path.join("checkpoints", "search"),
+    checkpoint_dir=DEFAULT_SEARCH_CHECKPOINT_DIR,
     runner=None,
     logger_factory=None,
 ):
@@ -173,7 +174,7 @@ def parse_args(argv=None):
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--max-runs", type=int, default=None)
     parser.add_argument("--results-path", default=os.path.join("checkpoints", "search", "results.json"))
-    parser.add_argument("--checkpoint-dir", default=os.path.join("checkpoints", "search"))
+    parser.add_argument("--checkpoint-dir", default=DEFAULT_SEARCH_CHECKPOINT_DIR)
     parser.add_argument("--device", default=None)
     parser.add_argument("--wandb-project", default="brain-hackathon")
     parser.add_argument("--wandb-mode", default=None)

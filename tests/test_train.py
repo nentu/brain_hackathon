@@ -58,9 +58,14 @@ def test_metrics_values():
     result = metrics.compute()
 
     assert result["acc"] == pytest.approx(0.75)
-    assert set(["acc", "f1", "precision", "recall", "sensitivity", "specificity"]) <= set(
-        result
-    )
+    assert {
+        "acc",
+        "f1",
+        "precision",
+        "recall",
+        "sensitivity",
+        "specificity",
+    } <= set(result)
     assert result["sensitivity"] == result["recall"]
     for value in result.values():
         assert 0.0 <= value <= 1.0
@@ -228,7 +233,8 @@ def test_logger_dumps_results(tmp_path):
     path = logger.finish()
 
     assert os.path.isfile(path)
-    payload = json.loads(open(path).read())
+    with open(path, encoding="utf-8") as handle:
+        payload = json.load(handle)
     assert payload["history"][0]["epoch"] == 1
     assert payload["best_model_path"].endswith("best.pt")
 

@@ -21,6 +21,7 @@ from brain_hackathon.train.utils import (
 )
 
 METRIC_KEYS = ("acc", "f1", "precision", "recall", "sensitivity", "specificity")
+DEFAULT_CV_CHECKPOINT_DIR = os.path.join("checkpoints", "cv")
 
 
 def _dedup_indices(index):
@@ -50,7 +51,7 @@ def run_cross_validation(
     weights=None,
     freeze_backbone=True,
     device=None,
-    checkpoint_dir=os.path.join("checkpoints", "cv"),
+    checkpoint_dir=DEFAULT_CV_CHECKPOINT_DIR,
     verbose=True,
     train_fn=None,
     model_factory=None,
@@ -120,14 +121,14 @@ def run_cross_validation(
                 weights_path=weights,
             )
 
-    common = dict(
-        epochs=epochs,
-        batch_size=batch_size,
-        patience=epochs,
-        loss_period=10**9,
-        device=device,
-        seed=seed,
-    )
+    common = {
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "patience": epochs,
+        "loss_period": 10**9,
+        "device": device,
+        "seed": seed,
+    }
 
     fold_metrics = []
     fold_sizes = []
@@ -237,7 +238,7 @@ def parse_args(argv=None):
         help="freeze the pretrained backbone (train only the head)",
     )
     parser.add_argument("--device", default=None)
-    parser.add_argument("--checkpoint-dir", default=os.path.join("checkpoints", "cv"))
+    parser.add_argument("--checkpoint-dir", default=DEFAULT_CV_CHECKPOINT_DIR)
     parser.add_argument("--wandb-project", default="brain-hackathon")
     parser.add_argument("--wandb-mode", default=None)
     parser.add_argument("--run-name", default=None)
