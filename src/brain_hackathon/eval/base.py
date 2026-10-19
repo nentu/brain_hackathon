@@ -70,6 +70,14 @@ class BaseBestModel:
 
         return grad_cam_plus_plus(self, image, target_class=target_class, **kwargs)
 
+    def shap(self, image, target_class=None, **kwargs):
+        """Return a Kernel SHAP heatmap dict for one image."""
+        from brain_hackathon.eval.shapley import shap
+
+        return shap(self, image, target_class=target_class, **kwargs)
+
+    sharp = shap
+
     def top_class(self, distribution):
         index = int(np.argmax(distribution))
         return self.classes[index], float(distribution[index])

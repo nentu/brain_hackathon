@@ -113,5 +113,13 @@ class BestModels:
             image, target_class=target_class, **kwargs
         )
 
+    def shap(self, image, kind="auto", target_class=None, **kwargs):
+        """Return a Kernel SHAP heatmap dict, dispatching raw/aligned."""
+        if kind == "auto":
+            kind = self.detect_kind(image)
+        return self._model_for(kind).shap(image, target_class=target_class, **kwargs)
+
+    sharp = shap
+
     def top_class(self, distribution):
         return self.raw.top_class(distribution)
