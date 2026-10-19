@@ -50,10 +50,37 @@ def test_preprocess_aligned_uses_six_channels():
     assert tuple(AlignedBestModel.preprocess(image).shape) == (6, 224, 224)
 
 
+def test_preprocess_aligned_accepts_modality_list():
+    images = [np.zeros((64, 48), np.uint8) for _ in range(6)]
+    tensor = AlignedBestModel.preprocess(images)
+
+    assert tuple(tensor.shape) == (6, 224, 224)
+    assert float(tensor.min()) >= 0.0
+    assert float(tensor.max()) <= 1.0
+
+
+def test_preprocess_aligned_accepts_modality_mapping():
+    images = {
+        "BR": np.zeros((64, 48), np.uint8),
+        "VF": np.zeros((64, 48), np.uint8),
+    }
+    tensor = AlignedBestModel.preprocess(images)
+
+    assert tuple(tensor.shape) == (6, 224, 224)
+    assert not tensor[1].any()
+
+
+def test_preprocess_aligned_rejects_unknown_modality():
+    with pytest.raises(ValueError, match="unknown modalities"):
+        AlignedBestModel.preprocess({"unknown": np.zeros((8, 8), np.uint8)})
+
+
 def test_detect_kind():
     assert BestModels.detect_kind(np.zeros((10, 10), np.uint8)) == "raw"
     assert BestModels.detect_kind(np.zeros((10, 10, 3), np.uint8)) == "raw"
     assert BestModels.detect_kind(np.zeros((10, 10, 6), np.uint8)) == "aligned"
+    assert BestModels.detect_kind([np.zeros((10, 10), np.uint8)]) == "aligned"
+    assert BestModels.detect_kind({"BR": np.zeros((10, 10), np.uint8)}) == "aligned"
 
 
 @pytest.fixture(scope="module")

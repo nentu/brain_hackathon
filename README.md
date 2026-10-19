@@ -260,10 +260,16 @@ probabilities = models.predict(image)
 class_name, confidence = models.top_class(probabilities)
 print(class_name, confidence)
 
-# 6-канальный стек H x W x 6 — модель определится автоматически
-# stack = ...
-# probabilities = models.predict(stack)
+# Шесть несогласованных модальностей: выравнивание выполнится автоматически
+# Порядок: BR, DA, HF, RO, SP, VF
+modalities = [br, da, hf, ro, sp, vf]
+probabilities = models.predict(modalities)
 ```
+
+Если изображения уже выровнены, можно передать один массив `H x W x 6`.
+Для ручного выравнивания доступна функция `align_modalities(images)`, а для
+модальностей, переданных словарём с именами `BR`, `DA`, `HF`, `RO`, `SP`, `VF`,
+отсутствующие каналы автоматически заполняются нулями.
 
 Для сравнения двух моделей на одном изображении можно использовать
 `models.predict_both(image)`: метод возвращает распределения от single-image

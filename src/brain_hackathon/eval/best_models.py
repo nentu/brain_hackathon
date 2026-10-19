@@ -45,6 +45,10 @@ class BestModels:
 
     @staticmethod
     def detect_kind(image):
+        if isinstance(image, dict):
+            return "aligned"
+        if isinstance(image, (list, tuple)):
+            return "aligned"
         array = np.asarray(image)
         if array.ndim == 2:
             return "raw"
