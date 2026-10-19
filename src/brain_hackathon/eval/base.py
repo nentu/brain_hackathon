@@ -64,6 +64,12 @@ class BaseBestModel:
             return np.empty((0, self.num_classes), dtype=np.float32)
         return self._predict_tensors([self.preprocess(image) for image in items])
 
+    def grad_cam(self, image, target_class=None, **kwargs):
+        """Return a Grad-CAM++ heatmap dict for one image."""
+        from brain_hackathon.eval.gradcam import grad_cam_plus_plus
+
+        return grad_cam_plus_plus(self, image, target_class=target_class, **kwargs)
+
     def top_class(self, distribution):
         index = int(np.argmax(distribution))
         return self.classes[index], float(distribution[index])

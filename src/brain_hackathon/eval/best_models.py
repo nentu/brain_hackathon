@@ -105,5 +105,13 @@ class BestModels:
         ensemble = weights[0] * raw + weights[1] * aligned
         return {"raw": raw, "aligned": aligned, "ensemble": ensemble}
 
+    def grad_cam(self, image, kind="auto", target_class=None, **kwargs):
+        """Return a Grad-CAM++ heatmap dict, dispatching raw/aligned."""
+        if kind == "auto":
+            kind = self.detect_kind(image)
+        return self._model_for(kind).grad_cam(
+            image, target_class=target_class, **kwargs
+        )
+
     def top_class(self, distribution):
         return self.raw.top_class(distribution)
