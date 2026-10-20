@@ -77,6 +77,18 @@ def parse_args(argv=None):
     parser.add_argument("--device", default=None)
     parser.add_argument("--gradcam-alpha", type=float, default=0.45)
     parser.add_argument("--shap-alpha", type=float, default=0.45)
+    parser.add_argument(
+        "--mask",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="mask heatmaps to the largest foreground region (default: enabled)",
+    )
+    parser.add_argument(
+        "--mask-radius",
+        type=float,
+        default=10.0,
+        help="intensity tolerance for the foreground mask (default: 10)",
+    )
     parser.add_argument("--shap-patch-grid", type=int, default=7)
     parser.add_argument("--shap-samples", type=int, default=128)
     parser.add_argument("--shap-batch-size", type=int, default=64)
@@ -238,9 +250,10 @@ def _run_attributions(model, item, args):
         kwargs["base_modality"] = args.base_modality.upper()
 
     results = {}
+    mask_kwargs = {"mask": args.mask, "mask_radius": args.mask_radius}
     if args.methods in ("both", "gradcam"):
         results["gradcam"] = model.grad_cam(
-            item["image"], alpha=args.gradcam_alpha, **kwargs
+            item["image"], alpha=args.gradcam_alpha, **mask_kwargs, **kwargs
         )
     if args.methods in ("both", "shap"):
         results["shap"] = model.shap(
@@ -251,6 +264,7 @@ def _run_attributions(model, item, args):
             baseline=args.shap_baseline,
             seed=args.shap_seed,
             alpha=args.shap_alpha,
+            **mask_kwargs,
             **kwargs,
         )
     return results
@@ -324,6 +338,8 @@ def main(argv=None):
         raise SystemExit(
             f"unknown class {args.target_class!r}; expected one of {DEFAULT_CLASSES}"
         )
+    if args.mask and args.mask_radius < 0.0:
+        raise SystemExit("--mask-radius must be non-negative")
     if args.methods in ("both", "shap"):
         if args.shap_patch_grid < 1:
             raise SystemExit("--shap-patch-grid must be positive")

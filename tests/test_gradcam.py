@@ -81,6 +81,17 @@ def test_grad_cam_raw(raw_adapter):
     assert 0.0 <= result["probability"] <= 1.0
 
 
+def test_grad_cam_with_mask(raw_adapter):
+    result = grad_cam_plus_plus(
+        raw_adapter, _raw_image(seed=5), mask=True, mask_radius=10.0
+    )
+
+    assert result["heatmap"].shape == (224, 224)
+    assert result["overlay"].shape == (224, 224, 3)
+    assert float(result["heatmap"].min()) >= 0.0
+    assert float(result["heatmap"].max()) <= 1.0
+
+
 def test_grad_cam_target_class(raw_adapter):
     image = _raw_image(seed=2)
     default = grad_cam_plus_plus(raw_adapter, image)

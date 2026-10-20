@@ -20,8 +20,17 @@ def test_parse_args_defaults():
     assert args.split == "Test"
     assert args.limit == 3
     assert args.methods == "both"
+    assert args.mask is True
+    assert args.mask_radius == 10.0
     assert args.shap_patch_grid == 7
     assert args.shap_samples == 128
+
+
+def test_parse_args_no_mask():
+    args = parse_args(["--no-mask", "--mask-radius", "12.5"])
+
+    assert args.mask is False
+    assert args.mask_radius == 12.5
 
 
 def test_parse_args_overrides():
@@ -128,3 +137,8 @@ def test_main_rejects_unknown_target_class():
 def test_main_rejects_invalid_shap_grid():
     with pytest.raises(SystemExit, match="patch-grid must be positive"):
         main(["--dataset", "raw", "--shap-patch-grid", "0"])
+
+
+def test_main_rejects_negative_mask_radius():
+    with pytest.raises(SystemExit, match="mask-radius must be non-negative"):
+        main(["--dataset", "raw", "--mask-radius", "-1"])

@@ -291,6 +291,12 @@ probabilities = models.predict(modalities)
 Оба метода работают для raw- и aligned-моделей. По умолчанию объясняется
 предсказанный класс; его можно задать явно через `target_class`.
 
+При визуализации heatmap по умолчанию обрезается по маске переднего плана:
+пиксели около модальной интенсивности считаются фоном, а наибольшая связная
+область фона исключается. Это убирает влияние за пределами головы/ткани.
+Порог маски задаётся через `--mask-radius` (по умолчанию `10`), а флаг
+`--no-mask` отключает обрезание.
+
 #### CLI
 
 ```bash
@@ -320,7 +326,7 @@ uv run explain_data \
 - `summary.csv` — истинный и предсказанный классы, вероятность и имена файлов.
 
 Пример для raw-снимка glioma (слева — оригинал, в центре — Grad-CAM++,
-справа — SHAP):
+справа — SHAP; heatmap обрезаны по маске переднего плана):
 
 ![Grad-CAM++ и SHAP для raw-снимка glioma](images/raw_glioma_1242_montage.png)
 
@@ -334,8 +340,8 @@ from brain_hackathon.eval import BestModels
 models = BestModels()
 image = cv2.imread("path/to/image.jpg", cv2.IMREAD_GRAYSCALE)
 
-gradcam = models.grad_cam(image, target_class="glioma")
-shap = models.shap(image, target_class="glioma")
+gradcam = models.grad_cam(image, target_class="glioma", mask=True)
+shap = models.shap(image, target_class="glioma", mask=True)
 
 cv2.imwrite("gradcam.png", gradcam["overlay"])
 cv2.imwrite("shap.png", shap["overlay"])
@@ -352,5 +358,7 @@ print(shap["class_name"], shap["probability"])
 Для aligned-модели можно передать список/словарь модальностей или массив
 `H x W x 6`; выравнивание выполняется автоматически. Параметр
 `base_modality` задаёт канал для фона, а `base_image` — произвольный фон.
+Маскирование включается через `mask=True`, а его чувствительность задаётся
+параметром `mask_radius`.
 
 У `BestModels` также есть алиас `sharp(...)` для SHAP.

@@ -130,6 +130,23 @@ def test_shap_raw(raw_adapter):
     assert 0.0 <= result["probability"] <= 1.0
 
 
+def test_shap_with_mask(raw_adapter):
+    result = shap(
+        raw_adapter,
+        _raw_image(seed=5),
+        patch_grid=3,
+        n_samples=32,
+        batch_size=16,
+        mask=True,
+        mask_radius=10.0,
+    )
+
+    assert result["heatmap"].shape == (224, 224)
+    assert result["overlay"].shape == (224, 224, 3)
+    assert float(result["heatmap"].min()) >= 0.0
+    assert float(result["heatmap"].max()) <= 1.0
+
+
 def test_shap_aligned(aligned_adapter):
     result = shap(
         aligned_adapter,

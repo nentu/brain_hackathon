@@ -9,6 +9,7 @@ import torch
 
 from brain_hackathon.eval.base import DEFAULT_CLASSES
 from brain_hackathon.eval.gradcam import _display_base, _resolve_target
+from brain_hackathon.eval.masking import apply_heatmap_mask
 
 __all__ = ["shap", "sharp"]
 
@@ -156,6 +157,8 @@ def shap(
     alpha=0.45,
     colormap=cv2.COLORMAP_JET,
     output_path=None,
+    mask=False,
+    mask_radius=10.0,
 ):
     """Draw a Kernel SHAP heatmap for one image.
 
@@ -172,7 +175,9 @@ def shap(
 
     The background is the same as for Grad-CAM++: the input image for raw models
     and the mean of non-empty aligned modalities by default. Pass ``base_modality``
-    or ``base_image`` to override it.
+    or ``base_image`` to override it. If ``mask`` is true, the heatmap is
+    restricted to the largest non-background region before it is drawn;
+    ``mask_radius`` controls the intensity tolerance in the ``[0, 255]`` scale.
 
     Returns a dict with ``heatmap`` (float32 HxW in ``[0, 1]``), ``overlay``
     (uint8 HxWx3 BGR), ``class_index``, ``class_name``, and ``probability``.
@@ -274,9 +279,17 @@ def shap(
         heatmap = cv2.resize(
             heatmap, (base_width, base_height), interpolation=cv2.INTER_LINEAR
         )
+    if mask:
+        heatmap = apply_heatmap_mask(heatmap, base, mask_radius)
 
     colored = cv2.applyColorMap(np.uint8(np.rint(heatmap * 255.0)), colormap)
-    overlay = cv2.addWeighted(colored, alpha, base, 1.0 - alpha, 0)
+    blended = cv2.addWeighted(colored, alpha, base, 1.0 - alpha, 0)
+    if mask:
+        overlay = base.copy()
+        active = heatmap > 0.0
+        overlay[active] = blended[active]
+    else:
+        overlay = blended
 
     if output_path is not None:
         path = os.fspath(output_path)

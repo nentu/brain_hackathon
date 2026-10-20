@@ -10,6 +10,7 @@ from brain_hackathon.data.dataset import MODALITIES
 from brain_hackathon.data.preprocessing import IMAGE_SIZE, resize_image
 from brain_hackathon.eval.aligned_model import align_modalities
 from brain_hackathon.eval.base import ALIGNED_CHANNELS, DEFAULT_CLASSES, to_gray
+from brain_hackathon.eval.masking import apply_heatmap_mask
 
 __all__ = ["grad_cam_plus_plus"]
 
@@ -152,6 +153,8 @@ def grad_cam_plus_plus(
     alpha=0.45,
     colormap=cv2.COLORMAP_JET,
     output_path=None,
+    mask=False,
+    mask_radius=10.0,
 ):
     """Draw a Grad-CAM++ heatmap for one image.
 
@@ -163,6 +166,10 @@ def grad_cam_plus_plus(
     models, and by default the mean of the non-empty aligned modalities. Pass
     ``base_modality`` (e.g. ``"BR"``) to overlay a specific aligned channel, or
     ``base_image`` to supply an explicit grayscale background.
+
+    If ``mask`` is true, the heatmap is restricted to the largest non-background
+    region before it is drawn; ``mask_radius`` controls the intensity tolerance
+    in the ``[0, 255]`` scale.
 
     Returns a dict with ``heatmap`` (float32 HxW in ``[0, 1]``), ``overlay``
     (uint8 HxWx3 BGR), ``class_index``, ``class_name``, and ``probability``.
@@ -221,9 +228,17 @@ def grad_cam_plus_plus(
     else:
         heatmap = np.zeros_like(heatmap)
     heatmap = np.clip(heatmap, 0.0, 1.0).astype(np.float32)
+    if mask:
+        heatmap = apply_heatmap_mask(heatmap, base, mask_radius)
 
     colored = cv2.applyColorMap(np.uint8(np.rint(heatmap * 255.0)), colormap)
-    overlay = cv2.addWeighted(colored, alpha, base, 1.0 - alpha, 0)
+    blended = cv2.addWeighted(colored, alpha, base, 1.0 - alpha, 0)
+    if mask:
+        overlay = base.copy()
+        active = heatmap > 0.0
+        overlay[active] = blended[active]
+    else:
+        overlay = blended
 
     if output_path is not None:
         path = os.fspath(output_path)
