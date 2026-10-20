@@ -274,3 +274,83 @@ probabilities = models.predict(modalities)
 Для сравнения двух моделей на одном изображении можно использовать
 `models.predict_both(image)`: метод возвращает распределения от single-image
 модели, multi-band модели и их усреднённый ансамбль.
+
+### Локализация областей влияния (Grad-CAM++ и SHAP)
+
+Для объяснения предсказаний доступны два метода, возвращающие heatmap и
+наложение на изображение:
+
+- **Grad-CAM++** — градиентный метод: использует градиенты логита целевого
+  класса по последнему свёрточному слою backbone. Требует один forward и один
+  backward проход, поэтому работает быстро.
+- **Kernel SHAP** — модельно-независимый метод на основе Shapley values:
+  изображение разбивается на сетку патчей, и для каждого патча оценивается
+  вклад в вероятность целевого класса. Требует много forward-проходов, но
+  показывает более полную картину влияния.
+
+Оба метода работают для raw- и aligned-моделей. По умолчанию объясняется
+предсказанный класс; его можно задать явно через `target_class`.
+
+#### CLI
+
+```bash
+# Grad-CAM++ и SHAP для 3 случайных объектов из Test каждого датасета
+uv run explain_data --dataset both --limit 3 --out outputs/attributions
+
+# Только Grad-CAM++ для glioma из raw-датасета
+uv run explain_data \
+  --dataset raw \
+  --classes glioma \
+  --methods gradcam \
+  --limit 5
+
+# Aligned-модель, heatmap поверх канала BR
+uv run explain_data \
+  --dataset aligned \
+  --limit 2 \
+  --base-modality BR
+```
+
+Для каждого объекта в `outputs/attributions` сохраняются:
+
+- `<item>_original.png` — исходное изображение;
+- `<item>_gradcam.png` — Grad-CAM++;
+- `<item>_shap.png` — SHAP;
+- `<item>_montage.png` — общая картинка;
+- `summary.csv` — истинный и предсказанный классы, вероятность и имена файлов.
+
+Пример для raw-снимка glioma (слева — оригинал, в центре — Grad-CAM++,
+справа — SHAP):
+
+![Grad-CAM++ и SHAP для raw-снимка glioma](images/raw_glioma_1242_montage.png)
+
+#### Python
+
+```python
+import cv2
+
+from brain_hackathon.eval import BestModels
+
+models = BestModels()
+image = cv2.imread("path/to/image.jpg", cv2.IMREAD_GRAYSCALE)
+
+gradcam = models.grad_cam(image, target_class="glioma")
+shap = models.shap(image, target_class="glioma")
+
+cv2.imwrite("gradcam.png", gradcam["overlay"])
+cv2.imwrite("shap.png", shap["overlay"])
+print(shap["class_name"], shap["probability"])
+```
+
+Оба метода возвращают словарь с одинаковыми ключами:
+
+- `heatmap` — `float32`-карта `H x W` в диапазоне `[0, 1]`;
+- `overlay` — `uint8`-изображение `H x W x 3` в BGR (готово для `cv2.imwrite`);
+- `class_index`, `class_name` — объясняемый класс;
+- `probability` — вероятность этого класса.
+
+Для aligned-модели можно передать список/словарь модальностей или массив
+`H x W x 6`; выравнивание выполняется автоматически. Параметр
+`base_modality` задаёт канал для фона, а `base_image` — произвольный фон.
+
+У `BestModels` также есть алиас `sharp(...)` для SHAP.
