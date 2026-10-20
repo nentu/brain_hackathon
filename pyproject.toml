@@ -39,6 +39,7 @@ dev = [
 download_data = "brain_hackathon.data.download:main"
 align_data = "brain_hackathon.data.align:main"
 preview_data = "brain_hackathon.data.preview:main"
+explain_data = "brain_hackathon.eval.explain:main"
 train_model = "brain_hackathon.train.main:main"
 search_hparams = "brain_hackathon.train.hpo.search:main"
 report_hparams = "brain_hackathon.train.hpo.report:main"
